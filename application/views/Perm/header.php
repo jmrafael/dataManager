@@ -12,7 +12,7 @@
 	<!-- Favicon -->
 	<link rel="icon" type="image/png" href="<?php echo base_url(); ?>favicon.png"/>
 
-	<title>AfyaData - <?php if (!empty($title)) echo $title; else "Taarifa kwa wakati!"; ?></title>
+	<title>AfyaData Moçambique - <?php if (!empty($title)) echo $title; else "Descobrir, Entender e Informar"; ?></title>
 
 	<!-- Bootstrap core CSS -->
 	<link href="<?= base_url() ?>assets/bootstrap/css/bootstrap.min.css" rel="stylesheet">

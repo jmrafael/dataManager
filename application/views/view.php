@@ -2,8 +2,8 @@
     <div class="overlay"></div>
     <div class="header-content">
         <div class="header-content-inner">
-            <h1>AfyaData</h1>
-            <p>Taarifa kwa wakati!!</p>
+            <h1>AfyaData Moçambique</h1>
+            <p>Descobrir, Entender e Informar</p>
         </div>
     </div>
 </header>
