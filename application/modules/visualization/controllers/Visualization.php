@@ -1,4 +1,5 @@
 <?php
+
 /**
  * AfyaData
  *
@@ -71,9 +72,9 @@ class Visualization extends CI_Controller
         }
 
         $project = $this->Project_model->get_project_by_id($project_id);
-        if (count($project) == 0) {
+        if (!$project)
             show_error("Project not exist", 500);
-        }
+
         $data['project'] = $project;
         $data['xforms'] = $xforms = $this->Xform_model->get_form_list();
 
@@ -146,7 +147,6 @@ class Visualization extends CI_Controller
                 $series["data"] = $series_data;
                 $data['categories'] = json_encode($categories);
                 $data['series'] = $series;
-
             } else {
                 $data = $this->_load_default_graph_data($data, $xforms, $table_name);
             }
@@ -158,8 +158,8 @@ class Visualization extends CI_Controller
 
         //render view
         $this->load->view("header", $data);
-        $this->load->view("chart", $data);
-        $this->load->view("footer", $data);
+        $this->load->view("chart");
+        $this->load->view("footer");
     }
 
     /**
@@ -280,7 +280,7 @@ class Visualization extends CI_Controller
 
         foreach ($table_fields_data as $field) {
 
-            $is_gps_field = (strpos($field->name, $gps_fields_initial == FALSE)) ? FALSE : TRUE;
+            //$is_gps_field = (strpos($field->name, $gps_fields_initial == FALSE)) ? FALSE : TRUE;
 
             if ($field->type == "enum") {
                 $axis_column = $field->name;
@@ -293,7 +293,7 @@ class Visualization extends CI_Controller
                 $group_by_column = ($enum_field != NULL) ? $enum_field : $field->name;
                 $function = "SUM";
                 break;
-            } elseif ($field->type == "varchar") {// && !$is_gps_field) {
+            } elseif ($field->type == "varchar") { // && !$is_gps_field) {
                 //Todo check here causes form jamii to bring errors
                 //TODO Fix this condition here
                 //($field->name != "meta_deviceID" && $field->name != "meta_instanceID") &&
@@ -316,6 +316,7 @@ class Visualization extends CI_Controller
         $function = strtolower($function);
         foreach ($results as $result) {
             log_message("debug", "Result " . json_encode($result));
+
             $categories[$i] = $result->$group_by_column;
             $series_data[$i] = $result->$function;
             $i++;
@@ -323,6 +324,7 @@ class Visualization extends CI_Controller
         $series["data"] = $series_data;
         $data['categories'] = json_encode($categories);
         $data['series'] = $series;
+
         return $data;
     }
 
@@ -338,11 +340,14 @@ class Visualization extends CI_Controller
             redirect('auth/login', 'refresh');
             exit;
         }
+        //title
+        $data['title'] = 'Map';
 
+        //project
         $project = $this->Project_model->get_project_by_id($project_id);
-        if (count($project) == 0) {
+        if (!$project)
             show_error("Project not exist", 500);
-        }
+
         $data['project'] = $project;
 
         $form = $this->Xform_model->find_by_id($form_id);
@@ -351,6 +356,7 @@ class Visualization extends CI_Controller
         if ($form) {
             $map_data = $this->_load_points($form->form_id);
 
+            //render view
             $this->load->view("header", $data);
             $this->load->view("map", $map_data);
             $this->load->view("footer");
@@ -372,10 +378,13 @@ class Visualization extends CI_Controller
 
         $gps_prefix = substr($point_field, 0, -6);
 
-        $form_data = $this->Xform_model->get_geospatial_data($form_id);
+        $form_data = $this->Xform_model->get_geospatial_data($form_id, 500);
+
+        if (!$form_data) {
+        }
 
         //todo Finish
-        /*$field_maps = $this->_get_mapped_table_column_name($form_id);
+        $field_maps = $this->_get_mapped_table_column_name($form_id);
         $data['mapped_fields'] = [];
         foreach ($form_data as $key => $value) {
             if (array_key_exists($key, $field_maps)) {
@@ -384,20 +393,27 @@ class Visualization extends CI_Controller
                 $data['mapped_fields'][$key] = $value;
             }
         }
-        $form_data = $data['mapped_fields'];*/
+
+        //echo '<pre>';print_r($field_maps);echo '</pre>'; exit();
+        //$form_data = $data['mapped_fields'];*/
 
         $addressPoints = '<script type="text/javascript"> var addressPoints = [';
         $first = 0;
 
-        foreach ($form_data as $val) {
-            $data_string = "<h3>" . $xform->title . "</h3>";
+        foreach ($form_data as $i => $val) {
+            $data_string = "<h4>" . $xform->title . "</h4><small>" . $form_data[$i]['submitted_at'] . "</small><br><br>";
 
             foreach ($val as $key => $value) {
                 if (!strpos($key, '_point')) {
                     if (preg_match('/(\.jpg|\.png|\.bmp)$/', $value)) {
                         $data_string .= str_replace('"', '\'', '<img src = "' . base_url() . 'assets/forms/data/images/' . $value . '" width="350" /><br/>');
                     } else {
-                        $data_string .= $key . " : " . str_replace('"', '', str_replace("'", "\'", $value)) . "<br/>";
+                        if (array_key_exists($key, $field_maps) && substr($key, 0, 4) == '_xf_') {
+                            $key =  $field_maps[$key];
+                        } else {
+                            continue;
+                        }
+                        $data_string .= $key . " : <b>" . str_replace('"', '', str_replace("'", "\'", urlencode(trim($value)))) . "</b><br/>";
                     }
                 }
             }

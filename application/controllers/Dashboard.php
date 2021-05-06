@@ -55,7 +55,7 @@ class Dashboard extends CI_Controller
         }
     }
 
-
+    //dashboard
     public function index()
     {
         $this->data['title'] = "Taarifa kwa wakati!";
@@ -69,9 +69,8 @@ class Dashboard extends CI_Controller
         }
 
         //statistics
-        $this->data['active_users'] = $this->User_model->count_data_collectors();
+        $this->data['data_collectors'] = $this->User_model->count_data_collectors();
         $this->data['published_forms'] = $this->Submission_model->count_published_forms();
-        $this->data['active_campaign'] = $this->Campaign_model->count_active_campaign();
         $this->data['new_feedback'] = $this->Feedback_model->count_new_feedback();
 
         $form_title = array();
@@ -85,7 +84,7 @@ class Dashboard extends CI_Controller
 
         $i = 0;
         foreach ($submitted_forms as $value) {
-            $form_title[$i] = '<a href="' . site_url('xform/form_data/' . $value->id) . '" >' . $value->title . '</a>';;
+            $form_title[$i] = '<a href="' . site_url('xform/form_data/' . $value->project_id.'/'.$value->id) . '" >' . $value->title . '</a>';
             $overall_data[$i] = $this->Submission_model->count_overall_submitted_forms($value->form_id);
             $monthly_data[$i] = $this->Submission_model->count_monthly_submitted_forms($value->form_id);
             $weekly_data[$i] = $this->Submission_model->count_weekly_submitted_forms($value->form_id);
@@ -101,6 +100,19 @@ class Dashboard extends CI_Controller
 
         //feedback
         $this->data['feedback'] = $this->Feedback_model->find_all(5, 0);
+
+        //detected diseases
+        $this->model->set_table('ohkr_detected_diseases');
+
+        //$this->db->group_by('disease_id');
+        $detected_diseases = $this->model->order_by('created_at', 'DESC')->limit(10)->get_all();
+        $this->data['detected_diseases'] = $detected_diseases;
+
+        foreach ($this->data['detected_diseases'] as $k => $v) {
+            //disease
+            $this->model->set_table('ohkr_diseases');
+            $this->data['detected_diseases'][$k]->disease = $this->model->get($v->disease_id);
+        }
 
         //render view
         $this->load->view('header', $this->data);

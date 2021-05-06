@@ -1,4 +1,4 @@
-<div class="container-fluid body-content">
+<div class="container">
     <div class="row">
         <div class="col-sm-12 col-md-12 main">
             <div id="header-title">
@@ -13,36 +13,55 @@
                 <li class="active"><?= $form->title ?> Map</li>
             </ol>
         </div>
+        <!--./col-md-12 -->
     </div>
-</div>
+    <!--./row -->
 
-<div class="container-fluid">
     <div class="row">
+        <div class="col-md-12">
+            <div style="min-height: 800px; height: auto; margin-bottom: 20px;" id="map"></div>
+            <?php echo $addressPoints; ?>
+            <script type="text/javascript">
+                // initialize the map
+                const map = L.map('map').setView([-18.6696553, 35.5273354], 6);
 
-        <div style="width: 100%; min-height: 600px; height: auto" id="map"></div>
-        <?php echo $addressPoints; ?>
-        <script type="text/javascript">
+                //create tileUrl and attribution
+                const tileUrl = 'https://api.mapbox.com/styles/v1/{id}/tiles/{z}/{x}/{y}?access_token=pk.eyJ1IjoibXVsdGljcyIsImEiOiJjazVvMnprajEwaG4wM2xuczQ2YjVqZzQ5In0.udinWRnw_kgrlqkZSVlNQQ';
+                const attribution = '&copy; <a href="https://www.openstreetmap.org/">OpenStreetMap</a> contributors, ' + '<a href="https://www.mapbox.com/">Mapbox</a>';
 
-            var tiles = L.tileLayer("http://{s}.tile.osm.org/{z}/{x}/{y}.png", {
+                //create tile
+                const tile = L.tileLayer(tileUrl, {
                     maxZoom: 18,
-                    attribution: '&copy; <a href="http://osm.org/copyright">OpenStreetMap</a> contributors, Points &copy 2012 LINZ'
-                }),
-                latlng = L.latLng(<?php echo $latlon; ?>);
+                    attribution: attribution,
+                    id: 'mapbox/streets-v11'
+                });
 
-            var map = L.map("map", {center: latlng, zoom: 13, layers: [tiles]});
+                //add title to map
+                tile.addTo(map);
 
-            var markers = L.markerClusterGroup();
+                //create group markers
+                var markers = L.markerClusterGroup();
 
-            for (var i = 0; i < addressPoints.length; i++) {
-                var a = addressPoints[i];
-                var title = a[2];
-                var marker = L.marker(new L.LatLng(a[0], a[1], {title: title}));
-                marker.bindPopup(title);
-                markers.addLayer(marker);
-            }
+                for (var i = 0; i < addressPoints.length; i++) {
+                    var a = addressPoints[i];
+                    var title = a[2];
 
-            map.addLayer(markers);
+                    var marker = L.marker(new L.LatLng(a[0], a[1], {
+                        title: title
+                    }));
+                    marker.bindPopup(title);
 
-        </script>
+                    //Adding marker to the map
+                    marker.addTo(map);
+                    markers.addLayer(marker);
+                }
+                //add markers into map layer
+                map.addLayer(markers);
+            </script>
+        </div>
+        <!--./col-md-12 -->
     </div>
+    <!--./row -->
+
 </div>
+<!--./container -->

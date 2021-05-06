@@ -84,7 +84,7 @@ $autoload['drivers'] = array();
 |
 |	$autoload['helper'] = array('url', 'file');
 */
-$autoload['helper'] = array('url', 'file', 'form', 'xform', 'common');
+$autoload['helper'] = array('url', 'file', 'form', 'xform', 'common', 'perm', 'text');
 
 /*
 | -------------------------------------------------------------------
@@ -128,7 +128,24 @@ $autoload['language'] = array();
 |	$autoload['model'] = array('first_model' => 'first');
 */
 $autoload['model'] = array(
-    'auth/User_model', 'auth/Acl_model', 'auth/Ion_auth_model', 'auth/Perm_model', 'xform/Submission_model',
-    'campaign/Campaign_model', 'feedback/Feedback_model', 'xform/Xform_model', 'facilities/Facilities_model',
-    'ohkr/Ohkr_model', 'model', 'Alert_model', 'xform/Xformreader_model', 'projects/Project_model',
-    'newsletters/Newsletter_model', 'newsletters/Media_model');
+    'auth/User_model',
+    'auth/Group_model',
+    'auth/users_group_model',
+    'auth/perms_class_model',
+    'auth/perms_method_model',
+    'auth/perms_group_model', 
+    'auth/Acl_model', 
+    'auth/Ion_auth_model', 
+    'auth/Perm_model', 
+    'xform/Submission_model',
+    'feedback/Feedback_model', 
+    'xform/Xform_model', 
+    'ohkr/Ohkr_model',
+    'ohkr/Disease_model',
+    'ohkr/Symptom_model',
+    'ohkr/Specie_model',
+    'model', 
+    'Alert_model', 
+    'xform/Xformreader_model', 
+    'projects/Project_model'
+);

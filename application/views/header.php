@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="utf-8">
     <meta http-equiv="X-UA-Compatible" content="IE=edge">
@@ -9,195 +10,154 @@
     <meta name="author" content="">
 
     <!-- Favicon -->
-    <link rel="icon" type="image/png" href="<?php echo base_url(); ?>favicon.png"/>
+    <link rel="icon" type="image/png" href="<?php echo base_url(); ?>favicon.png" />
 
-    <title>AfyaData - <?= (!empty($title)) ? $title : config_item("site_name"); ?></title>
+    <title>AfyaData Moçambique - <?= (!empty($title)) ? $title : config_item("site_name"); ?></title>
 
     <!-- Bootstrap core CSS -->
-    <link href="<?= base_url() ?>assets/bootstrap/css/bootstrap.min.css" rel="stylesheet">
-
-    <!-- Google fonts - witch you want to use - (rest you can just remove) -->
-    <link href='http://fonts.googleapis.com/css?family=Lato:300,400,600,700' rel='stylesheet' type='text/css'>
-
-    <!-- Leaflet, marker cluster js and css -->
-    <link rel="stylesheet" href="http://cdn.leafletjs.com/leaflet-0.7/leaflet.css"/>
-    <script src="http://cdn.leafletjs.com/leaflet-0.7/leaflet.js"></script>
-    <script type="text/javascript"
-            src="<?php echo base_url(); ?>assets/public/leaflet/dist/leaflet.markercluster-src.js"></script>
-    <link rel="stylesheet" href="<?php echo base_url(); ?>assets/public/leaflet/dist/MarkerCluster.css"/>
-    <link rel="stylesheet" href="<?php echo base_url(); ?>assets/public/leaflet/dist/MarkerCluster.Default.css"/>
-
-    <!-- Custom CSS -->
-    <link rel="stylesheet" href="<?php echo base_url(); ?>assets/public/css/afyadata.css" type="text/css">
-
-
-    <!-- IE10 viewport hack for Surface/desktop Windows 8 bug -->
-    <link href="<?= base_url() ?>assets/bootstrap/css/ie10-viewport-bug-workaround.css" rel="stylesheet">
-
-    <!-- Custom styles for this template -->
-    <link href="<?= base_url() ?>assets/bootstrap/css/navbar-fixed-top.css" rel="stylesheet">
-    <link rel="stylesheet" href="<?php echo base_url(); ?>assets/public/css/form.css" type="text/css">
+    <link href="<?= base_url('assets/bootstrap/css/bootstrap.min.css') ?>" rel="stylesheet">
 
     <!-- Font awesome css -->
-    <link href="<?php echo base_url(); ?>assets/bootstrap/font-awesome/css/font-awesome.min.css" rel="stylesheet"
-          type="text/css">
+    <link href="<?= base_url('assets/font-awesome/css/font-awesome.min.css'); ?>" rel="stylesheet" type="text/css">
 
-    <script src="<?php echo base_url(); ?>assets/public/js/jquery-1.12.1.min.js"></script>
-    <script type="text/javascript" src="<?php echo base_url(); ?>assets/public/js/afyadata.js"></script>
-    <!--<script src="https://ajax.googleapis.com/ajax/libs/jquery/1.11.3/jquery.min.js"></script>-->
-    <!-- HTML5 shim and Respond.js for IE8 support of HTML5 elements and media queries -->
-    <!--[if lt IE 9]>
-    <script src="https://oss.maxcdn.com/html5shiv/3.7.2/html5shiv.min.js"></script>
-    <script src="https://oss.maxcdn.com/respond/1.4.2/respond.min.js"></script>
-    <![endif]-->
+    <!--chosen select -->
+    <link href="<?= base_url('assets/plugins/chosen_v1.8.7/chosen.css') ?>" rel="stylesheet">
+
+    <!-- Google fonts - witch you want to use - (rest you can just remove) -->
+    <link href='https://fonts.googleapis.com/css?family=Lato:300,400,600,700' rel='stylesheet' type='text/css'>
+
+    <!-- Leaflet, marker cluster js and css -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.7.1/dist/leaflet.css" integrity="sha512-xodZBNTC5n17Xt2atTPuE1HxjVMSvLVW9ocqUKLsCC5CXdbqCmblAshOMAS6/keqq/sMZMZ19scR4PsZChSR7A==" crossorigin="" />
+    <script src="https://unpkg.com/leaflet@1.7.1/dist/leaflet.js" integrity="sha512-XQoYMqMTK8LvdxXYG3nZ448hOEQiglfqkJs1NOQV44cWnUrBc8PkAOcXy20w0vlaXaVUearIOBhiXZ5V3ynxwA==" crossorigin=""></script>
+    <script src="https://api.tiles.mapbox.com/mapbox.js/plugins/leaflet-markercluster/v0.4.0/leaflet.markercluster.js"></script>
+
+    <!--./marker -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.4.1/dist/MarkerCluster.css" />
+    <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.0/dist/MarkerCluster.Default.css" />
+    <script src="https://unpkg.com/leaflet.markercluster@1.3.0/dist/leaflet.markercluster.js"></script>
+
+    <!-- Custom CSS -->
+    <link rel="stylesheet" href="<?= base_url('assets/css/afyadata.css'); ?>" type="text/css">
+    <link href="<?= base_url('assets/css/navbar-fixed-top.css') ?>" rel="stylesheet">
+    <link rel="stylesheet" href="<?= base_url('assets/css/form.css'); ?>" type="text/css">
+
+    <!--js -->
+    <script src="<?= base_url('assets/js/jquery-1.12.1.min.js'); ?>"></script>
+    <script type="text/javascript" src="<?= base_url('assets/js/afyadata.js'); ?>"></script>
+
+    <!-- Chosen JavaScript -->
+    <script type="text/javascript" src="<?= base_url('assets/plugins/chosen_v1.8.7/chosen.jquery.js') ?>"></script>
+
+    <script type="application/javascript">
+        $(document).ready(function() {
+            $('.chosen-select').chosen();
+            $('.chosen-select-deselect').chosen({
+                allow_single_deselect: true
+            });
+        });
+    </script>
 </head>
 
 <body>
+    <!-- Fixed navbar -->
+    <nav class="navbar navbar-default navbar-fixed-top">
+        <div class="container-fluid">
+            <div class="navbar-header">
+                <button type="button" class="navbar-toggle collapsed" data-toggle="collapse" data-target="#navbar" aria-expanded="false" aria-controls="navbar">
+                    <span class="sr-only">Toggle navigation</span>
+                    <span class="icon-bar"></span>
+                    <span class="icon-bar"></span>
+                    <span class="icon-bar"></span>
+                </button>
+                <?= anchor("dashboard", '<img src="' . base_url() . 'assets/public/images/logo.png" alt="AfyaData" height="25"/>', 'class="navbar-brand"') ?>
 
-<!-- Fixed navbar -->
-<nav class="navbar navbar-default navbar-fixed-top">
-    <div class="container">
-        <div class="navbar-header">
-            <button type="button" class="navbar-toggle collapsed" data-toggle="collapse" data-target="#navbar"
-                    aria-expanded="false" aria-controls="navbar">
-                <span class="sr-only">Toggle navigation</span>
-                <span class="icon-bar"></span>
-                <span class="icon-bar"></span>
-                <span class="icon-bar"></span>
-            </button>
-            <?= anchor("dashboard", '<img src="' . base_url() . 'assets/public/images/logo.png" alt="AfyaData" height="30"/>', 'class="navbar-brand"') ?>
+            </div>
+            <div id="navbar" class="navbar-collapse collapse">
+                <ul class="nav navbar-nav">
+                    <?php if (perms_class('Projects')) {  ?>
+                        <li class="dropdown">
+                            <a href="#" class="dropdown-toggle" data-toggle="dropdown" role="button" aria-haspopup="true" aria-expanded="false"><?= $this->lang->line("nav_item_projects") ?> <span class="caret"></span></a>
+                            <ul class="dropdown-menu">
+                                <?php if (perms_role('Projects', 'forms')) { ?>
+                                    <?= display_projects() ?>
+                                <?php } ?>
+                                <?php if (perms_role('Projects', 'lists')) { ?>
+                                    <li><?php echo anchor('projects/lists', $this->lang->line("nav_item_list_projects")); ?></li>
+                                <?php } ?>
+                                <?php if (perms_role('Projects', 'add_new')) { ?>
+                                    <li><?php echo anchor('projects/add_new', $this->lang->line("nav_item_add_new_project")); ?></li>
+                                <?php } ?>
+                            </ul>
+                        </li>
+                    <?php } ?>
 
+                    <?php if (perms_class('Ohkr')) { ?>
+                        <li class="dropdown">
+                            <a href="#" class="dropdown-toggle" data-toggle="dropdown" role="button" aria-haspopup="true" aria-expanded="false"><?= $this->lang->line("nav_item_ohkr") ?> <span class="caret"></span></a>
+                            <ul class="dropdown-menu">
+                                <?php if (perms_role('Ohkr', 'species_list')) { ?>
+                                    <li><?php echo anchor('ohkr/species', $this->lang->line("nav_item_list_species")); ?></li>
+                                <?php } ?>
+
+                                <?php if (perms_role('Ohkr', 'disease_list')) { ?>
+                                    <li><?php echo anchor('ohkr/diseases', $this->lang->line("nav_item_list_disease")); ?></li>
+                                <?php } ?>
+
+                                <?php if (perms_role('Ohkr', 'symptoms_list')) { ?>
+                                    <li><?php echo anchor('ohkr/symptoms', $this->lang->line("nav_item_list_symptoms")); ?></li>
+                                <?php } ?>
+                            </ul>
+                        </li>
+                    <?php }  ?>
+
+                    <?php if (perms_role('Feedback', 'lists')) {  ?>
+                        <li><?php echo anchor('feedback/lists', $this->lang->line("nav_item_chats")); ?></li>
+                    <?php }  ?>
+
+                    <?php if (perms_role('Whatsapp', 'message_list')) {  ?>
+                        <li><?= anchor('feedback/whatsapp/message_list', 'Whatsapp') ?></li>
+                    <?php }  ?>
+                </ul>
+
+                <ul class="nav navbar-nav navbar-right">
+                    <li class="">
+                        <a href="#" class="dropdown-toggle" data-toggle="dropdown" role="button" aria-haspopup="true" aria-expanded="false"><?= $this->lang->line("nav_item_language") ?> <span class="caret"></span></a>
+                        <ul class="dropdown-menu">
+                            <li><i class="fa fa-user-circle" aria-hidden="true"></i> <?php echo anchor('languageChanger/switchLang/english', $this->lang->line("nav_item_language_english")); ?></li>
+                            <li><a href="#">Portuguese</a></li>
+                        </ul>
+                    </li>
+
+                    <?php if ($this->ion_auth->is_admin()) { ?>
+                        <li class="dropdown">
+                            <a href="#" class="dropdown-toggle" data-toggle="dropdown" role="button" aria-haspopup="true" aria-expanded="false"><?= $this->lang->line("nav_item_manage_users") ?>
+                                <span class="caret"></span></a>
+                            <ul class="dropdown-menu">
+                                <?php if (perms_role('Users', 'lists')) {  ?>
+                                    <li><?php echo anchor('auth/users/lists', $this->lang->line("nav_item_list_users")); ?></li>
+                                <?php }  ?>
+
+                                <?php if (perms_role('Groups', 'lists')) {  ?>
+                                    <li><?php echo anchor('auth/groups/lists', $this->lang->line("nav_item_list_groups")); ?></li>
+                                <?php }  ?>
+                                <li class="divider"></li>
+                                <li><?php echo anchor('auth/accesscontrol', $this->lang->line("nav_item_acl")); ?></li>
+                            </ul>
+                        </li>
+                    <?php } ?>
+
+                    <li class="">
+                        <a href="#" class="dropdown-toggle" data-toggle="dropdown" role="button" aria-haspopup="true" aria-expanded="false">
+                            <i class="fa fa-user-circle" aria-hidden="true"></i> <?php display_full_name(); ?><span class="caret"></span></a>
+                        <ul class="dropdown-menu">
+                            <li><?php echo anchor('auth/profile', $this->lang->line("nav_item_my_profile")); ?></li>
+                            <li><?php echo anchor('auth/change_password', $this->lang->line("nav_item_change_password")); ?></li>
+                            <li class="divider"></li>
+                            <li><?= anchor('auth/logout', '<i class="fa fa-sign-out fa-fw"></i>' . $this->lang->line("nav_item_logout")); ?></li>
+                        </ul>
+                    </li>
+                </ul>
+            </div>
+            <!--/.nav-collapse -->
         </div>
-        <div id="navbar" class="navbar-collapse collapse">
-            <ul class="nav navbar-nav">
-                <li class="dropdown">
-                    <a href="#" class="dropdown-toggle" data-toggle="dropdown" role="button" aria-haspopup="true"
-                       aria-expanded="false"><?= $this->lang->line("nav_item_projects") ?> <span
-                                class="caret"></span></a>
-                    <ul class="dropdown-menu">
-                        <?php
-
-                        $projects = $this->session->userdata("projects");
-
-                        if (!empty($projects)) {
-                            foreach ($projects as $project) {
-                                echo "<li>" . anchor('projects/forms/' . $project->id, $project->title) . "</li>";
-                            }
-                        }
-
-                        ?>
-                        <li><?php echo anchor('projects/lists', $this->lang->line("nav_item_list_projects")); ?></li>
-                        <li><?php echo anchor('projects/add_new', $this->lang->line("nav_item_add_new_project")); ?></li>
-                    </ul>
-                </li>
-
-                <?php /*if (perm_module('Xform')) { */ ?><!--
-                    <li class="dropdown">
-                        <a href="#" class="dropdown-toggle" data-toggle="dropdown" role="button" aria-haspopup="true"
-                           aria-expanded="false"><? /*= $this->lang->line("nav_item_forms") */ ?> <span class="caret"></span></a>
-                        <ul class="dropdown-menu">
-                            <li><?php /*echo anchor('xform/forms', $this->lang->line("nav_item_list_forms")); */ ?></li>
-                            <li><?php /*echo anchor('xform/add_new', $this->lang->line("nav_item_add_new_form")); */ ?></li>
-                            <li><?php /*echo anchor('xform/searchable_form_lists', $this->lang->line("nav_item_searchable_form")); */ ?></li>
-                        </ul>
-                    </li>
-                --><?php /*} */ ?>
-
-                <?php if (perm_module('Feedback')) { ?>
-                    <li><?php echo anchor('feedback/lists', $this->lang->line("nav_item_chats")); ?></li>
-                <?php } ?>
-
-                <?php if (perm_module('Ohkr')) { ?>
-                    <li class="dropdown">
-                        <a href="#" class="dropdown-toggle" data-toggle="dropdown" role="button" aria-haspopup="true"
-                           aria-expanded="false"><?= $this->lang->line("nav_item_ohkr") ?> <span
-                                    class="caret"></span></a>
-                        <ul class="dropdown-menu">
-                            <li><?php echo anchor('ohkr/disease_list', $this->lang->line("nav_item_list_disease")); ?></li>
-                            <li><?php echo anchor('ohkr/symptoms_list', $this->lang->line("nav_item_list_symptoms")); ?></li>
-                            <li><?php echo anchor('ohkr/species_list', $this->lang->line("nav_item_list_species")); ?></li>
-                        </ul>
-                    </li>
-                <?php } ?>
-
-                <?php if (perm_module('Campaign')) { ?>
-                    <li><?php echo anchor('campaign/lists', $this->lang->line("nav_item_manage_campaign")); ?></li>
-                <?php } ?>
-
-                <?php if (perm_module('Campaign')) { ?>
-                    <li class="dropdown">
-                        <a href="#" class="dropdown-toggle" data-toggle="dropdown" role="button" aria-haspopup="true"
-                           aria-expanded="false">Newsletters
-                            <span class="caret"></span></a>
-                        <ul class="dropdown-menu">
-                            <li><?php echo anchor('newsletters/edition_lists', 'Editions'); ?></li>
-                            <li><?php echo anchor('newsletters/lists', 'Stories'); ?></li>
-                            <li><?php echo anchor('newsletters/send_newsletter', 'Send Newsletter'); ?></li>
-                            <li><?php echo anchor('newsletters/media/lists', 'Media Manager'); ?></li>
-                        </ul>
-                    </li>
-                <?php } ?>
-
-                <?php if (perm_module('Whatsapp')) { ?>
-                    <li><?php echo anchor('feedback/whatsapp/message_list', 'Whatsapp'); ?></li>
-                <?php } ?>
-
-                <?php if (perm_module('Blog')) { ?>
-                    <li class="dropdown">
-                        <a href="#" class="dropdown-toggle" data-toggle="dropdown" role="button" aria-haspopup="true"
-                           aria-expanded="false">Blog <span class="caret"></span></a>
-                        <ul class="dropdown-menu">
-                            <li><?php echo anchor('blog/post/new_post', "New Post"); ?></li>
-                            <li><?php echo anchor('blog/post/list_posts', "All Posts"); ?></li>
-                        </ul>
-                    </li>
-                <?php } ?>
-
-            </ul>
-
-            <ul class="nav navbar-nav navbar-right">
-                <li class="">
-                    <a href="#" class="dropdown-toggle" data-toggle="dropdown" role="button" aria-haspopup="true"
-                       aria-expanded="false"><?= $this->lang->line("nav_item_language") ?> <span
-                                class="caret"></span></a>
-                    <ul class="dropdown-menu">
-                        <li><?php echo anchor('languageChanger/switchLang/english', $this->lang->line("nav_item_language_english")); ?></li>
-                        <li><?php echo anchor('languageChanger/switchLang/swahili', $this->lang->line("nav_item_language_swahili")); ?></li>
-                    </ul>
-                </li>
-
-                <?php if ($this->ion_auth->is_admin()) { ?>
-                    <li class="dropdown">
-                        <a href="#" class="dropdown-toggle" data-toggle="dropdown" role="button" aria-haspopup="true"
-                           aria-expanded="false"><?= $this->lang->line("nav_item_manage_users") ?>
-                            <span class="caret"></span></a>
-                        <ul class="dropdown-menu">
-                            <li><?php echo anchor('auth/users_list', $this->lang->line("nav_item_list_users")); ?></li>
-                            <li><?php echo anchor('auth/group_list', $this->lang->line("nav_item_list_groups")); ?></li>
-                            <!--<li><?php echo anchor('auth/create_user', $this->lang->line("nav_item_create_user")); ?></li>
-                            <li class="divider"></li>
-                            <li class="dropdown-header"><?= $this->lang->line("nav_item_manage_facilities") ?></li>
-                            <li><?php echo anchor('facilities/lists', $this->lang->line("nav_item_list_facilities")); ?></li>
-                            <li><?php echo anchor('facilities/add_new', $this->lang->line("nav_item_add_facility")); ?></li>-->
-                            <li class="divider"></li>
-                            <li class="dropdown-header"><?= $this->lang->line("nav_item_manage_permission") ?></li>
-                            <li><?php echo anchor('auth/module_list', $this->lang->line("nav_item_list_module")); ?></li>
-                            <li><?php echo anchor('auth/permission_list', $this->lang->line("nav_item_list_permission")); ?></li>
-                            <li><?php echo anchor('auth/accesscontrol', $this->lang->line("nav_item_acl")); ?></li>
-                        </ul>
-                    </li>
-                <?php } ?>
-
-                <li class="">
-                    <a href="#" class="dropdown-toggle" data-toggle="dropdown" role="button" aria-haspopup="true"
-                       aria-expanded="false"><?php display_full_name(); ?><span class="caret"></span></a>
-                    <ul class="dropdown-menu">
-                        <li><?php echo anchor('auth/profile', $this->lang->line("nav_item_my_profile")); ?></li>
-                        <li><?php echo anchor('auth/change_password', $this->lang->line("nav_item_change_password")); ?></li>
-                        <li><?php echo anchor('auth/logout', $this->lang->line("nav_item_logout")); ?></li>
-                    </ul>
-                </li>
-            </ul>
-        </div><!--/.nav-collapse -->
-    </div>
-</nav>
+    </nav>

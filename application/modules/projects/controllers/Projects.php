@@ -57,7 +57,7 @@ class Projects extends MX_Controller
         }
 
         $this->user_id = $this->session->userdata("user_id");
-        $this->controller = $this->router->fetch_class();
+        $this->controller = "Projects";
     }
 
     /**
@@ -74,10 +74,10 @@ class Projects extends MX_Controller
     //list projects
     function lists()
     {
-        $this->data['title'] = "Projects List";
+        $this->data['title'] = "Projects";
 
         //check permission
-        //$this->has_allowed_perm($this->router->fetch_method());
+        $this->has_allowed_perm("lists");
 
         $filter_conditions = null;
         if (!$this->ion_auth->is_admin()) {
@@ -89,8 +89,8 @@ class Projects extends MX_Controller
         }
 
         $config = array(
-            'base_url'    => $this->config->base_url("projects/lists"),
-            'total_rows'  => $total_rows,
+            'base_url' => $this->config->base_url("projects/lists"),
+            'total_rows' => $total_rows,
             'uri_segment' => 3,
         );
 
@@ -112,8 +112,7 @@ class Projects extends MX_Controller
     function add_new()
     {
         $this->data['title'] = $this->lang->line("title_add_new_project");
-        //check permission
-        //$this->has_allowed_perm($this->router->fetch_method());
+        $this->has_allowed_perm($this->router->fetch_method());
 
         //form validation
         $this->form_validation->set_rules('name', $this->lang->line("label_project_title"), 'required|trim');
@@ -121,10 +120,10 @@ class Projects extends MX_Controller
 
         if ($this->form_validation->run() == TRUE) {
             $project_details = array(
-                'title'       => $this->input->post('name'),
+                'title' => $this->input->post('name'),
                 'description' => $this->input->post('description'),
-                'created_at'  => date('Y-m-d H:i:s'),
-                'owner'       => $this->user_id
+                'created_at' => date('Y-m-d H:i:s'),
+                'created_by' => $this->user_id
             );
 
 
@@ -133,7 +132,7 @@ class Projects extends MX_Controller
             if ($id) {
                 $this->_update_session_projects();
                 $this->session->set_flashdata('message', display_message($this->lang->line("message_project_added")));
-                redirect('projects/lists', 'refresh');
+                redirect('projects/forms/' . $id, 'refresh');
             } else {
                 $this->session->set_flashdata('message', display_message($this->lang->line("message_project_not_added"), 'danger'));
                 redirect('projects/add_new', 'refresh');
@@ -142,21 +141,21 @@ class Projects extends MX_Controller
 
         //populate data
         $this->data['name'] = array(
-            'name'        => 'name',
-            'id'          => 'name',
-            'type'        => 'text',
-            'value'       => $this->form_validation->set_value('name'),
-            'class'       => 'form-control',
+            'name' => 'name',
+            'id' => 'name',
+            'type' => 'text',
+            'value' => $this->form_validation->set_value('name'),
+            'class' => 'form-control',
             'placeholder' => $this->lang->line("placeholder_project_title")
         );
 
         $this->data['description'] = array(
-            'name'        => 'description',
-            'id'          => 'description',
-            'type'        => 'text area',
-            'value'       => $this->form_validation->set_value('description'),
-            'rows'        => '5',
-            'class'       => 'form-control',
+            'name' => 'description',
+            'id' => 'description',
+            'type' => 'text area',
+            'value' => $this->form_validation->set_value('description'),
+            'rows' => '5',
+            'class' => 'form-control',
             'placeholder' => $this->lang->line("placeholder_project_description")
         );
 
@@ -173,7 +172,7 @@ class Projects extends MX_Controller
         $this->data['title'] = $this->lang->line("title_edit_project");
 
         //check permission
-        //$this->has_allowed_perm($this->router->fetch_method());
+        $this->has_allowed_perm($this->router->fetch_method());
 
         $project = $this->Project_model->get_project_by_id($project_id);
 
@@ -183,30 +182,30 @@ class Projects extends MX_Controller
 
         if ($this->form_validation->run() == TRUE) {
             $data = array(
-                'title'       => $this->input->post('name'),
+                'title' => $this->input->post('name'),
                 'description' => $this->input->post('description')
             );
             $this->db->update('projects', $data, array('id' => $project_id));
 
             $this->session->set_flashdata('message', display_message($this->lang->line("message_project_updated")));
-            redirect('projects/lists', 'refresh');
+            redirect('projects/forms/' . $project_id, 'refresh');
         }
 
         //populate data
         $this->data['name'] = array(
-            'name'  => 'name',
-            'id'    => 'name',
-            'type'  => 'text',
+            'name' => 'name',
+            'id' => 'name',
+            'type' => 'text',
             'value' => $this->form_validation->set_value('name', $project->title),
             'class' => 'form-control'
         );
 
         $this->data['description'] = array(
-            'name'  => 'description',
-            'id'    => 'description',
-            'type'  => 'text area',
+            'name' => 'description',
+            'id' => 'description',
+            'type' => 'text area',
             'value' => $this->form_validation->set_value('description', $project->description),
-            'rows'  => '5',
+            'rows' => '5',
             'class' => 'form-control'
         );
 
@@ -216,10 +215,19 @@ class Projects extends MX_Controller
         $this->load->view('footer');
     }
 
+    //project details
     public function forms($project_id)
     {
-        $this->data['title'] = "Forms List";
+        $this->data['title'] = "Project Form";
+        $this->has_allowed_perm($this->router->fetch_method());
 
+        $this->model->set_table('projects');
+        $project = $this->model->get_by(array('id' => $project_id));
+
+        if (!$project) 
+            show_error("Project not exists", 500);
+        
+        $this->data['project'] = $project;
         $this->data['project_id'] = $project_id;
 
         $filter_conditions = null;
@@ -241,51 +249,13 @@ class Projects extends MX_Controller
                 echo json_encode(['status' => "success", "forms_count" => $project_forms_count]);
             }
         } else {
-
-            /*if (!$this->input->post("search")) {
-                $config = array(
-                    'base_url'    => $this->config->base_url("projects/forms"),
-                    'total_rows'  => $this->Xform_model->count_all_xforms("published"),
-                    'uri_segment' => 3,
-                );
-
-                $this->pagination->initialize($config);
-                $page = ($this->uri->segment(3)) ? $this->uri->segment(3) : 0;
-
-                if ($this->ion_auth->is_admin()) {
-                    $data['forms'] = $this->Xform_model->get_form_list(NULL, $this->pagination->per_page, $page, "published");
-                } else {
-                    if ($filter_conditions != null) {
-                        $data['forms'] = $this->Xform_model->get_form_list(null, $this->pagination->per_page, $page, "published", $filter_conditions);
-                    } else {
-                        $data['forms'] = $this->Xform_model->get_form_list($this->user_id, $this->pagination->per_page, $page, "published");
-                    }
-                }
-
-
-                $data["links"] = $this->pagination->create_links();
-
-            } else {
-                $form_name = $this->input->post("name", NULL);
-                $access = $this->input->post("access", NULL);
-                $status = $this->input->post("status", NULL);
-
-                if ($this->ion_auth->is_admin()) {
-                    $forms = $this->Xform_model->search_forms(NULL, $form_name, $access, $status);
-                } else {
-                    if ($filter_conditions != null)
-                        $forms = $this->Xform_model->search_forms(null, $form_name, $access, $status, 30, 0, $filter_conditions);
-                    else
-                        $forms = $this->Xform_model->search_forms($this->user_id, $form_name, $access, $status);
-                }
-
-                if ($forms) {
-                    $this->session->set_flashdata("message", display_message("Found " . count($forms) . " matching forms"));
-                    $data['forms'] = $forms;
-                }
-            }*/
-
             $this->data['forms'] = $project_forms;
+
+            //count sent forms
+            foreach ($this->data['forms'] as $k => $v) {
+                $this->model->set_table($v->form_id);
+                $this->data['forms'][$k]->sent_forms = $this->model->count_all();
+            }
 
             //render view
             $this->load->view('header', $this->data);

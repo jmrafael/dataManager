@@ -1,5 +1,5 @@
 <?php
-defined('BASEPATH') OR exit('No direct script access allowed');
+defined('BASEPATH') or exit('No direct script access allowed');
 
 /*
 | -------------------------------------------------------------------------
@@ -49,14 +49,42 @@ defined('BASEPATH') OR exit('No direct script access allowed');
 | Examples:	my-controller/index	-> my_controller/index
 |		my-controller/my-method	-> my_controller/my_method
 */
-$route['default_controller'] = 'welcome';
+$route['default_controller'] = 'web';
+$route['about'] = 'web/about';
+$route['create-project'] = 'web/create_project';
+$route['collect-data'] = 'web/collect_data';
+$route['analyze-data'] = 'web/analyze_data';
+
 $route['formList'] = 'xform/form_list';
 $route['submission'] = 'xform/submission';
-$route['about'] = 'welcome/about';
 $route['blog'] = 'blog/post';
 $route['login'] = 'auth/login';
 $route['logout'] = 'auth/logout';
 $route['open_source_licenses'] = 'welcome/open_source_licenses';
+
+//ohkr
+$route['ohkr/diseases'] = 'ohkr/disease_list';
+$route['ohkr/diseases/(:num)'] = 'ohkr/disease_list/$1';
+$route['ohkr/diseases/(:num)/(:num)'] = 'ohkr/disease_list/$1/$2';
+$route['ohkr/diseases/add_new'] = 'ohkr/add_new_disease';
+$route['ohkr/diseases/edit/(:num)'] = 'ohkr/edit_disease/$1';
+$route['ohkr/diseases/delete/(:num)'] = 'ohkr/delete_disease/$1';
+
+$route['ohkr/species'] = 'ohkr/species_list';
+$route['ohkr/species/(:num)'] = 'ohkr/species_list/$1';
+$route['ohkr/species/(:num)/(:num)'] = 'ohkr/species_list/$1/$2';
+$route['ohkr/species/add_new'] = 'ohkr/add_new_specie';
+$route['ohkr/species/edit/(:num)'] = 'ohkr/edit_specie/$1';
+$route['ohkr/species/delete/(:num)'] = 'ohkr/delete_specie/$1';
+
+$route['ohkr/symptoms'] = 'ohkr/symptoms_list';
+$route['ohkr/symptoms/(:num)'] = 'ohkr/symptoms_list/$1';
+$route['ohkr/symptoms/(:num)/(:num)'] = 'ohkr/symptoms_list/$1/$2';
+$route['ohkr/symptoms/add_new'] = 'ohkr/add_new_symptom';
+$route['ohkr/symptoms/edit/(:num)'] = 'ohkr/edit_symptom/$1';
+$route['ohkr/symptoms/delete/(:num)'] = 'ohkr/delete_symptom/$1';
+
+$route['ohkr/disease_symptoms/(:num)'] = 'ohkr/disease_symptoms_list/$1';
 
 //Forms controller
 //$route['xform/formList'] = 'xform/form_list';

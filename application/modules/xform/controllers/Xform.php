@@ -1,4 +1,5 @@
 <?php
+
 /**
  * AfyaData
  *
@@ -36,7 +37,7 @@
  * @since        Version 1.0.0
  */
 
-defined('BASEPATH') or exit ('No direct script access allowed');
+defined('BASEPATH') or exit('No direct script access allowed');
 
 /**
  * XForm Class
@@ -46,8 +47,13 @@ defined('BASEPATH') or exit ('No direct script access allowed');
  * @author   Eric Beda
  * @link     http://sacids.org
  */
+
+use PhpOffice\PhpSpreadsheet\Spreadsheet;
+use PhpOffice\PhpSpreadsheet\IOFactory;
+
 class Xform extends MX_Controller
 {
+    private $controller;
     private $data;
     private $xFormReader;
 
@@ -56,7 +62,14 @@ class Xform extends MX_Controller
     private $sender; //Object
     private $mobile_app_language = "swahili";
 
-    private $objPHPExcel;
+    private $spreadsheet;
+
+    //todo: remove this when finish implementation
+    const MOBILE_SERVICE_ID = 93;
+    private $sms_sender_id;
+    private $api_key;
+    private $user;
+    private $sms_push_url;
 
     public function __construct()
     {
@@ -67,9 +80,17 @@ class Xform extends MX_Controller
         $this->load->dbforge();
 
         $this->user_id = $this->session->userdata("user_id");
+        $this->controller = "Xform";
         $this->form_validation->set_error_delimiters('<div class="alert alert-danger"><i class="fa fa-warning"></i>.', '</div>');
 
-        $this->objPHPExcel = new PHPExcel();
+        //todo: remove this when finish implementation
+        $this->sms_sender_id = '15200';
+        $this->api_key = '7jl4QjSEKLwBAYWa0Z5YNn5FUdnrxkeY0CYkxIt8';
+        $this->user = 'afyadata@sacids.org';
+        $this->sms_push_url = 'http://154.118.230.108/msdg/public/quick_sms';
+
+        //create XLS
+        $this->spreadsheet = new Spreadsheet();
     }
 
     function _is_logged_in()
@@ -80,9 +101,20 @@ class Xform extends MX_Controller
         }
     }
 
+    /**
+     * @param $method_name
+     * Check if user has permission
+     */
+    function has_allowed_perm($method_name)
+    {
+        if (!perms_role($this->controller, $method_name)) {
+            show_error("You are not allowed to view this page", 401, "Unauthorized");
+        }
+    }
+
     public function index()
     {
-        $this->forms();
+        //$this->forms();
     }
 
     /**
@@ -96,27 +128,29 @@ class Xform extends MX_Controller
         // Form Received in openrosa server
         $http_response_code = 201;
 
+        //log_message("DEBUG","diggest => " . $_SERVER ['PHP_AUTH_DIGEST']);
+
         // Get the digest from the http header
-        if (isset($_SERVER ['PHP_AUTH_DIGEST']))
-            $digest = $_SERVER ['PHP_AUTH_DIGEST'];
+        if (isset($_SERVER['PHP_AUTH_DIGEST']))
+            $digest = $_SERVER['PHP_AUTH_DIGEST'];
 
         // server realm and unique id
         $realm = $this->config->item("realm");
         $nonce = md5(uniqid());
 
         // Check if there was no digest, show login
-        if (empty ($digest)) {
+        if (empty($digest)) {
             // populate login form if no digest authenticate
             $this->form_auth->require_login_prompt($realm, $nonce);
             log_message('debug', 'exiting, digest was not found');
-            exit ();
+            exit();
         }
 
         // http_digest_parse
         $digest_parts = $this->form_auth->http_digest_parse($digest);
 
         // username obtained from http digest
-        $username = $digest_parts ['username'];
+        $username = $digest_parts['username'];
 
         // get user details from database
         $user = $this->User_model->find_by_username($username);
@@ -132,10 +166,10 @@ class Xform extends MX_Controller
         }
 
         // show status header if user not available in database
-        if (empty ($db_username)) {
+        if (empty($db_username)) {
             // populate login form if no digest authenticate
             $this->form_auth->require_login_prompt($realm, $nonce);
-            exit ();
+            exit();
         }
 
         // Based on all the info we gathered we can figure out what the response should be
@@ -144,20 +178,20 @@ class Xform extends MX_Controller
         $calculated_response = md5("{$A1}:{$digest_parts['nonce']}:{$digest_parts['nc']}:{$digest_parts['cnonce']}:{$digest_parts['qop']}:{$A2}");
 
         // If digest fails, show login
-        if ($digest_parts ['response'] != $calculated_response) {
+        if ($digest_parts['response'] != $calculated_response) {
             // populate login form if no digest authenticate
             $this->form_auth->require_login_prompt($realm, $nonce);
-            exit ();
+            exit();
         }
 
         // IF passes authentication
-        if ($_SERVER ['REQUEST_METHOD'] === "HEAD") {
+        if ($_SERVER['REQUEST_METHOD'] === "HEAD") {
             $http_response_code = 204;
-        } elseif ($_SERVER ['REQUEST_METHOD'] === "POST") {
+        } elseif ($_SERVER['REQUEST_METHOD'] === "POST") {
 
             foreach ($_FILES as $file) {
                 // File details
-                $file_name = $file ['name'];
+                $file_name = $file['name'];
 
                 // check file extension
                 $value = explode('.', $file_name);
@@ -177,7 +211,7 @@ class Xform extends MX_Controller
                     );
 
                     $inserted_form_id = $this->Submission_model->create($data);
-
+                    log_message("debug", "submission inserted => " . $inserted_form_id);
                 } elseif ($file_extension == 'jpg' or $file_extension == 'jpeg' or $file_extension == 'png') {
                     // path to store images
                     $path = $this->config->item("images_data_upload_dir") . $file_name;
@@ -186,19 +220,18 @@ class Xform extends MX_Controller
                 } elseif ($file_extension == '3gpp' or $file_extension == 'amr') {
                     // path to store audio
                     $path = $this->config->item("audio_data_upload_dir") . $file_name;
-
                 } elseif ($file_extension == '3gp' or $file_extension == 'mp4') {
                     // path to store video
                     $path = $this->config->item("video_data_upload_dir") . $file_name;
                 }
 
                 // upload file to the server
-                move_uploaded_file($file ['tmp_name'], $path);
+                move_uploaded_file($file['tmp_name'], $path);
             }
             // call function to insert xform data in a database
-            if (!$this->_insert($uploaded_filename)) {
-                if ($this->Submission_model->delete_submission($inserted_form_id))
-                    @unlink($path);
+            if (!$this->insert_data($uploaded_filename)) {
+                $this->Submission_model->delete_submission($inserted_form_id);
+                // @unlink($path);
             }
         }
 
@@ -213,8 +246,9 @@ class Xform extends MX_Controller
      * @param string $filename
      * @return Mixed
      */
-    public function _insert($filename)
+    public function insert_data($filename)
     {
+        //$filename = 'CHR Dalili Mifugo_2018-05-23_14-45-36.xml';
         $this->lang->load("api", $this->mobile_app_language);
 
         $datafile = $this->config->item("form_data_upload_dir") . $filename;
@@ -223,11 +257,13 @@ class Xform extends MX_Controller
         $this->xFormReader->load_xml_data();
 
         $statement = $this->xFormReader->get_insert_form_data_query();
+        log_message('debug', $statement);
         $insert_result = $this->Xform_model->insert_data($statement);
 
         $xForm_form = $this->Xform_model->find_by_xform_id($this->xFormReader->get_table_name());
-        if ($xForm_form->allow_dhis == 1 && $insert_result) {
 
+        //deals with dhis2
+        if ($xForm_form->allow_dhis == 1 && $insert_result) {
             $dhis_data_elements = $this->Xform_model->get_fieldname_map($this->xFormReader->get_table_name());
             $form_data = $this->Xform_model->find_form_data_by_id($xForm_form->form_id, $insert_result);
             $form_data_array = (array)$form_data;
@@ -260,24 +296,31 @@ class Xform extends MX_Controller
             log_message("debug", "Dhis2 server response " . $response);
         }
 
+        //deals with symptoms
         if ($xForm_form->has_symptoms_field == 1 && $insert_result) {
-
             $symptoms_column_name = $this->Xform_model->find_form_map_by_field_type($xForm_form->form_id, "DALILI")->col_name;
+            log_message("debug", "symptoms column name => " . json_encode($symptoms_column_name));
+
             $district_column_name = $this->Xform_model->find_form_map_by_field_type($xForm_form->form_id, "DISTRICT")->col_name;
+            log_message("debug", "district column name => " . json_encode($district_column_name));
 
             $inserted_form_data = $this->Xform_model->find_form_data_by_id($xForm_form->form_id, $insert_result);
-            $symptoms_reported = explode(" ", $inserted_form_data->$symptoms_column_name);
+            log_message("debug", "inserted data => " . json_encode($inserted_form_data));
 
+            $symptoms_reported = explode(" ", $inserted_form_data->$symptoms_column_name);
             $district = $inserted_form_data->$district_column_name;
 
-            if ($xForm_form->has_specie_type_field) {
+            if ($xForm_form->has_specie_type_field == 1) {
                 $species_column_name = $this->Xform_model->find_form_map_by_field_type($xForm_form->form_id, "SPECIE")->col_name;
                 $species_name = $inserted_form_data->$species_column_name;
             } else {
-                $species_name = "binadamu";
+                $species_name = "Humano";
             }
+            log_message("debug", "specie => " . $species_name);
 
             $specie = $this->Ohkr_model->find_species_by_name($species_name);
+            log_message("debug", "specie db => " . json_encode($specie));
+
             if ($specie) {
                 $request_data = [
                     "specie_id" => $specie->id,
@@ -286,6 +329,9 @@ class Xform extends MX_Controller
 
                 $result = $this->Alert_model->send_post_symptoms_request(json_encode($request_data));
                 $json_object = json_decode($result);
+
+                log_message("debug", "requested_data => " . json_encode($request_data));
+                log_message("debug", "results => " . $result);
 
                 if (isset($json_object->status) && $json_object->status == 1) {
                     $detected_diseases = [];
@@ -305,7 +351,7 @@ class Xform extends MX_Controller
                 }
             }
 
-            if (count($symptoms_reported) > 0) {
+            if ($symptoms_reported) {
                 $message_sender_name = config_item("sms_sender_id");
                 $request_url_endpoint = "sms/1/text/single";
 
@@ -313,10 +359,9 @@ class Xform extends MX_Controller
                 $suspected_diseases = $this->Ohkr_model->find_diseases_by_symptoms_code($symptoms_reported);
 
                 $message = $this->lang->line("message_data_received");
-                $suspected_diseases_list = $message . "<br/>";
+                $suspected_diseases_list = "Recebemos o seu formulário, esta é uma lista de doenças suspeitas com base nas informações que você enviou<br/>";
 
                 if ($suspected_diseases) {
-
                     $i = 1;
                     foreach ($suspected_diseases as $disease) {
 
@@ -330,24 +375,40 @@ class Xform extends MX_Controller
                             "location" => $district
                         );
 
-                        if (ENVIRONMENT == 'development' || ENVIRONMENT == "testing") {
-                            $sender_msg = $this->Ohkr_model->find_sender_response_message($disease->disease_id, "sender");
+                        //get response message
+                        //$this->model->set_table('ohkr_response_sms');
+                        //$sender_msg = $this->model->get_by(['disease_id' => $disease->disease_id, 'group_id' => 4]);
 
-                            if ($sender_msg) {
-                                $this->_save_msg_and_send($sender_msg->rsms_id, $this->sender->phone, $sender_msg->message,
-                                    $this->sender->first_name, $message_sender_name, $request_url_endpoint);
-                            }
+                        $sender_msg = $this->Ohkr_model->find_sender_response_message($disease->disease_id, "sender");
 
-                            $response_messages = $this->Ohkr_model->find_response_messages_and_groups($disease->disease_id,
-                                str_ireplace("_", " ", $district));
+                        if ($sender_msg) {
+                            $this->_save_msg_and_send(
+                                $sender_msg->id,
+                                $this->sender->phone,
+                                $sender_msg->message,
+                                $this->sender->first_name,
+                                $message_sender_name,
+                                $request_url_endpoint
+                            );
+                        }
 
-                            $counter = 1;
-                            if ($response_messages) {
-                                foreach ($response_messages as $sms) {
-                                    $this->_save_msg_and_send($sms->rsms_id, $sms->phone, $sms->message, $sms->first_name,
-                                        $message_sender_name, $request_url_endpoint);
-                                    $counter++;
-                                }
+                        $response_messages = $this->Ohkr_model->find_response_messages_and_groups(
+                            $disease->disease_id,
+                            str_ireplace("_", " ", $district)
+                        );
+
+                        $counter = 1;
+                        if ($response_messages) {
+                            foreach ($response_messages as $sms) {
+                                $this->_save_msg_and_send(
+                                    $sms->rsms_id,
+                                    $sms->phone,
+                                    $sms->message,
+                                    $sms->first_name,
+                                    $message_sender_name,
+                                    $request_url_endpoint
+                                );
+                                $counter++;
                             }
                         }
                         $i++;
@@ -355,7 +416,8 @@ class Xform extends MX_Controller
 
                     $this->Ohkr_model->save_detected_diseases($suspected_diseases_array);
                 } else {
-                    $suspected_diseases_list = $this->lang->line("message_auto_detect_disease_failed");
+                    $suspected_diseases_list = 'Recebemos suas informações, infelizmente, o sistema não pode detectar automaticamente doenças mais prováveis
+                    por favor, procure mais conselhos de nossos especialistas';
                 }
 
                 $feedback = array(
@@ -373,13 +435,12 @@ class Xform extends MX_Controller
                 log_message("debug", "No symptom reported");
             }
         } else {
-
-            log_message("debug", "Form does not have symptoms field or sysmptoms field is not specified in " . base_url("xform/edit_form/" . $xForm_form->id));
+            log_message("debug", "Form does not have symptoms field or symptoms field is not specified in " . base_url("xform/edit_form/" . $xForm_form->id));
 
             $feedback = array(
                 "user_id" => $this->user_submitting_feedback_id,
                 "form_id" => $this->xFormReader->get_table_name(),
-                "message" => $this->lang->line("message_feedback_data_received"),
+                "message" => 'Obrigado pelo envio das informações, Recebemos o seu formulário.',
                 "date_created" => date('Y-m-d H:i:s'),
                 "instance_id" => $this->xFormReader->get_form_data()['meta_instanceID'],
                 "sender" => "server",
@@ -387,6 +448,8 @@ class Xform extends MX_Controller
             );
             $this->Feedback_model->create_feedback($feedback);
         }
+
+        log_message("debug", "Insert => " . $insert_result);
         return $insert_result;
     }
 
@@ -444,14 +507,14 @@ class Xform extends MX_Controller
      *            Input string
      * @return string response
      */
-    function _get_response($http_response_code, $response_message = "Asante, Fomu imepokelewa")
+    function _get_response($http_response_code, $response_message = "Obrigado pelo envio das informações, Recebemos o seu formulário.")
     {
         // OpenRosa Success Response
         $response = '<OpenRosaResponse xmlns="http://openrosa.org/http/response">
                     <message nature="submit_success">' . $response_message . '</message>
                     </OpenRosaResponse>';
 
-        $content_length = sizeof($response);
+        $content_length = ''; //sizeof($response);
         // set header response
         header("X-OpenRosa-Version:1.0");
         header("X-OpenRosa-Accept-Content-Length:" . $content_length);
@@ -466,7 +529,6 @@ class Xform extends MX_Controller
     function form_list()
     {
         // Get the digest from the http header
-
         if (isset($_SERVER['PHP_AUTH_DIGEST']))
             $digest = $_SERVER['PHP_AUTH_DIGEST'];
 
@@ -520,14 +582,15 @@ class Xform extends MX_Controller
             $i++;
         }
 
-        $forms = $this->Xform_model->get_form_list_by_perms($user_perms);
+        //forms
+        $forms = $this->Xform_model->get_form_list_by_perms($user_perms, 30, 0, "published", 0);
 
         $xml = '<xforms xmlns="http://openrosa.org/xforms/xformsList">';
 
         foreach ($forms as $form) {
 
             // used to notify if anything has changed with the form, so that it may be updated on download
-            $hash = md5($form->form_id . $form->date_created . $form->filename . $form->id . $form->title . $form->last_updated);
+            $hash = md5($form->form_id . $form->created_at . $form->filename . $form->id . $form->title . $form->last_updated);
 
             $xml .= '<xform>';
             $xml .= '<formID>' . $form->form_id . '</formID>';
@@ -540,7 +603,7 @@ class Xform extends MX_Controller
         }
         $xml .= '</xforms>';
 
-        $content_length = sizeof($xml);
+        $content_length = ''; //sizeof($xml);
         //set header response
         header('Content-Type:text/xml; charset=utf-8');
         header('HTTP_X_OPENROSA_VERSION:1.0');
@@ -562,12 +625,13 @@ class Xform extends MX_Controller
         }
 
         $data['title'] = $this->lang->line("heading_add_new_form");
+        $this->has_allowed_perm($this->router->fetch_method());
 
+        //project
         $project = $this->Project_model->get_project_by_id($project_id);
-
-        if (count($project) == 0) {
+        if (!$project)
             show_error("Project not exist", 500);
-        }
+
         $data['project'] = $project;
         $data['project_id'] = $project_id;
 
@@ -606,7 +670,7 @@ class Xform extends MX_Controller
             if (!empty($_FILES['userfile']['name'])) {
 
                 $config['upload_path'] = $form_definition_upload_dir;
-                $config['allowed_types'] = 'xml';
+                $config['allowed_types'] = '*';
                 $config['max_size'] = '1024';
                 $config['remove_spaces'] = TRUE;
 
@@ -623,7 +687,7 @@ class Xform extends MX_Controller
                     $perms = $this->input->post("perms");
 
                     $all_permissions = "";
-                    if (count($perms) > 0) {
+                    if ($perms) {
                         $all_permissions = join(",", $perms);
                     }
 
@@ -639,20 +703,21 @@ class Xform extends MX_Controller
                         if ($create_table_result) {
 
                             $form_details = array(
-                                "user_id" => get_current_user_id(),
                                 "form_id" => $this->xFormReader->get_table_name(),
                                 "jr_form_id" => $this->xFormReader->get_jr_form_id(),
+                                "project_id" => $project_id,
                                 "title" => $this->input->post("title"),
                                 "description" => $this->input->post("description"),
                                 "filename" => $filename,
-                                "date_created" => date("Y-m-d H:i:s"),
                                 "access" => $this->input->post("access"),
                                 "push" => $this->input->post("push"),
+                                "status" => "published",
                                 "perms" => $all_permissions,
-                                "project_id" => $project_id
+                                "created_by" => get_current_user_id(),
+                                "created_at" => date("Y-m-d H:i:s"),
                             );
 
-                            //TODO Check if form is built from ODK Aggregate Build to avoid errors during initialization
+                            //todo: Check if form is built from ODK Aggregate Build to avoid errors during initialization
 
                             if ($this->Xform_model->create_xform($form_details)) {
                                 $this->session->set_flashdata("message", display_message($this->lang->line("form_upload_successful")));
@@ -766,11 +831,14 @@ class Xform extends MX_Controller
     function edit_form($project_id, $form_id)
     {
         $this->_is_logged_in();
+        $this->has_allowed_perm($this->router->fetch_method());
+
+        //title
         $data['title'] = $this->lang->line("heading_edit_form");
 
         $project = $this->Project_model->get_project_by_id($project_id);
 
-        if (count($project) == 0) {
+        if (!$project) {
             show_error("Project not exist", 500);
         }
         $data['project'] = $project;
@@ -786,10 +854,12 @@ class Xform extends MX_Controller
         // Search field by table name from mapping fields
         $db_table_fields = $this->Xform_model->get_fieldname_map($form->form_id);
 
+        //table fields
         $table_fields = $this->Xform_model->find_table_columns($form->form_id);
+
         if (count($db_table_fields) != count($table_fields)) {
             foreach ($table_fields as $tf) {
-                if (!$this->Xform_model->xform_table_column_exists($form->form_id, $tf)) {
+                if ($this->Xform_model->xform_table_column_exists($form->form_id, $tf) == 0) {
                     $details = [
                         "table_name" => $form->form_id,
                         "col_name" => $tf,
@@ -800,8 +870,8 @@ class Xform extends MX_Controller
                 }
             }
         }
-        $data['table_fields'] = $this->Xform_model->get_fieldname_map($form->form_id);
 
+        $data['table_fields'] = $this->Xform_model->get_fieldname_map($form->form_id);
 
         $allow_dhis2_checked = (isset($_POST['allow_dhis2'])) ? 1 : 0;
 
@@ -822,7 +892,7 @@ class Xform extends MX_Controller
             $available_user_permissions = [];
 
             foreach ($groups as $group) {
-                $available_group_permissions['G' . $group->id . 'G'] = $group->name;
+                $available_group_permissions['G' . $group->id . 'G'] = $group->description;
             }
             $data['group_perms'] = $available_group_permissions;
 
@@ -850,7 +920,7 @@ class Xform extends MX_Controller
                 $new_perms = $this->input->post("perms");
 
                 $new_perms_string = "";
-                if (count($new_perms) > 0) {
+                if ($new_perms) {
                     $new_perms_string = join(",", $new_perms);
                 }
 
@@ -859,6 +929,8 @@ class Xform extends MX_Controller
                     "description" => $this->input->post("description"),
                     "access" => $this->input->post("access"),
                     "push" => $this->input->post("push"),
+                    "has_symptoms_field" => $this->input->post("has_symptoms_field"),
+                    "has_specie_type_field" => $this->input->post("has_specie_type_field"),
                     "perms" => $new_perms_string,
                     "last_updated" => date("c"),
                     "allow_dhis" => $allow_dhis2_checked,
@@ -879,7 +951,7 @@ class Xform extends MX_Controller
                     $mapped_fields[$i]["chart_use"] = $chart_use[$i];
                     $mapped_fields[$i]["type"] = $type_option[$i];
                     $mapped_fields[$i]["hide"] = 0;
-                    $mapped_fields[$i]["dhis_data_element"] = $dhis2_data_element[$i];
+                    //$mapped_fields[$i]["dhis_data_element"] = $dhis2_data_element[$i];
 
                     if (!empty($hides) && in_array($ids[$i], $hides)) {
                         $mapped_fields[$i]["hide"] = 1;
@@ -909,11 +981,11 @@ class Xform extends MX_Controller
     function delete_form($project_id, $form_id)
     {
         $this->_is_logged_in();
-        $data['title'] = 'delete form';
+        $this->has_allowed_perm($this->router->fetch_method());
 
         $project = $this->Project_model->get_project_by_id($project_id);
 
-        if (count($project) == 0) {
+        if (!$project) {
             show_error("Project not exist", 500);
         }
 
@@ -944,43 +1016,97 @@ class Xform extends MX_Controller
      * @param $xform_id
      * Archives the uploaded xforms so that they do not appear at first on the form lists page
      */
-    function archive_xform($xform_id)
+    function archive_xform($project_id, $form_id)
     {
         $this->_is_logged_in();
+        $this->has_allowed_perm($this->router->fetch_method());
 
-        if (!$xform_id) {
-            $this->session->set_flashdata("message", $this->lang->line("select_form_to_delete"));
-            redirect("projects");
-            exit;
+        $project = $this->Project_model->get_project_by_id($project_id);
+
+        if (!$project) {
+            show_error("Project not exist", 500);
         }
 
-        if ($this->Xform_model->archive_form($xform_id)) {
+        //forms
+        $form = $this->Xform_model->find_by_id($form_id);
+        if (!$form) {
+            show_error("Form does not exist", 500);
+        }
+
+        if ($this->Xform_model->archive_form($form_id)) {
             $this->session->set_flashdata("message", display_message($this->lang->line("form_archived_successful")));
         } else {
             $this->session->set_flashdata("message", display_message($this->lang->line("error_failed_to_delete_form"), "danger"));
         }
-        redirect("projects");
+        redirect('projects/forms/' . $project_id, 'refresh');
     }
 
     /**
      * @param $xform_id
      */
-    function restore_from_archive($xform_id)
+    function restore_from_archive($project_id, $form_id)
     {
         $this->_is_logged_in();
+        $this->has_allowed_perm($this->router->fetch_method());
 
-        if (!$xform_id) {
-            $this->session->set_flashdata("message", $this->lang->line("select_form_to_delete"));
-            redirect("projects");
-            exit;
+        $project = $this->Project_model->get_project_by_id($project_id);
+
+        if (!$project) {
+            show_error("Project not exist", 500);
         }
 
-        if ($this->Xform_model->restore_xform_from_archive($xform_id)) {
+        //forms
+        $form = $this->Xform_model->find_by_id($form_id);
+        if (!$form) {
+            show_error("Form does not exist", 500);
+        }
+
+        if ($this->Xform_model->restore_xform_from_archive($form_id)) {
             $this->session->set_flashdata("message", display_message($this->lang->line("form_restored_successful")));
         } else {
             $this->session->set_flashdata("message", display_message($this->lang->line("error_failed_to_restore_form"), "danger"));
         }
-        redirect("projects");
+        redirect('projects/forms/' . $project_id, 'refresh');
+    }
+
+    /**
+     * @param $project_id
+     * @param $form_id
+     */
+    function ussd_form_data($project_id, $form_id)
+    {
+        $this->_is_logged_in();
+
+        $project = $this->Project_model->get_project_by_id($project_id);
+
+        if (!$project) {
+            show_error("Project not exist", 500);
+        }
+        $data['project'] = $project;
+
+        if (!$form_id) {
+            set_flashdata(display_message($this->lang->line("select_form_to_delete"), "error"));
+            redirect('xform/ussd_form_data/' . $project_id . '/' . $form_id, 'refresh');
+            exit;
+        }
+
+        $form = $this->Xform_model->find_by_id($form_id);
+
+        if ($form) {
+            $data['title'] = $form->title . " form";
+            $data['form'] = $form;
+
+            //data lists
+            $this->model->set_table('ad_build_fao_data');
+            $data['data_list'] = $this->model->order_by('submitted_at', 'DESC')->get_all();
+
+            $this->load->view('header', $data);
+            $this->load->view("ussd_form_data_details");
+            $this->load->view('footer');
+        } else {
+            $this->session->set_flashdata("message", display_message("Form does not exists", "danger"));
+            redirect("projects/lists");
+        }
     }
 
     /**
@@ -993,79 +1119,61 @@ class Xform extends MX_Controller
 
         $project = $this->Project_model->get_project_by_id($project_id);
 
-        if (count($project) == 0) {
+        if (!$project)
             show_error("Project not exist", 500);
-        }
+
         $data['project'] = $project;
 
-        if (!$form_id) {
-            set_flashdata(display_message($this->lang->line("select_form_to_delete"), "error"));
-            redirect('xform/form_data/' . $project_id . '/' . $form_id, 'refresh');
-            exit;
-        }
-
+        //form
         $form = $this->Xform_model->find_by_id($form_id);
+
+        if (!$form)
+            show_error("Form not exist", 500);
+
+        $data['title'] = $form->title . " form";
+        $data['form'] = $form;
+        $data['form_id'] = $form->form_id;
 
         $where_condition = null;
         if (!$this->ion_auth->is_admin()) {
             $where_condition = $this->Acl_model->find_user_permissions($this->user_id, $form->form_id);
         }
 
-        //if $_POST['export']
-        //todo add a check if is idwe form
-        if (isset($_POST['export'])) {
-            //check if week number selected
-            if ($this->input->post('week') == null) {
-                set_flashdata(display_message('You should select week number', 'danger'));
-                redirect('xform/form_data/' . $project_id . '/' . $form_id, 'refresh');
-            }
+        //table fields
+        $data['table_fields'] = $this->Xform_model->find_table_columns($form->form_id);
+        $data['field_maps'] = $this->_get_mapped_table_column_name($form->form_id);
 
-            //week number
-            $week_number = $this->input->post('week');
-            $this->export_IDWE($form_id, $week_number);
+        $mapped_fields = array();
+        foreach ($data['table_fields'] as $key => $column) {
+            if (array_key_exists($column, $data['field_maps'])) {
+                $mapped_fields[$column] = $data['field_maps'][$column];
+            } else {
+                $mapped_fields[$column] = $column;
+            }
         }
 
-        if ($form) {
-            $data['title'] = $form->title . " form";
-            $data['form'] = $form;
-            $data['table_fields'] = $this->Xform_model->find_table_columns($form->form_id);
-            $data['field_maps'] = $this->_get_mapped_table_column_name($form->form_id);
+        $custom_maps = $this->Xform_model->get_fieldname_map($form->form_id);
 
-            $mapped_fields = array();
-            foreach ($data['table_fields'] as $key => $column) {
-                if (array_key_exists($column, $data['field_maps'])) {
-                    $mapped_fields[$column] = $data['field_maps'][$column];
-                } else {
-                    $mapped_fields[$column] = $column;
-                }
+        foreach ($custom_maps as $f_map) {
+            if (array_key_exists($f_map['col_name'], $mapped_fields)) {
+                $mapped_fields[$f_map['col_name']] = $f_map['field_label'];
             }
+        }
 
-            $custom_maps = $this->Xform_model->get_fieldname_map($form->form_id);
+        $data['mapped_fields'] = $mapped_fields;
 
-            foreach ($custom_maps as $f_map) {
-                if (array_key_exists($f_map['col_name'], $mapped_fields)) {
-                    $mapped_fields[$f_map['col_name']] = $f_map['field_label'];
-                }
-            }
+        //Prevents the filters from applying to a different form
+        if ($this->session->userdata("filters_form_id") != $form_id) {
+            $this->session->unset_userdata("filters_form_id");
+            $this->session->unset_userdata("form_filters");
+        }
 
-            $data['mapped_fields'] = $mapped_fields;
+        //apply search
+        if (isset($_POST['search'])) {
+            $start_at = $this->input->post('start_at');
+            $end_at = $this->input->post('end_at');
 
-            $config = array(
-                'base_url' => $this->config->base_url("xform/form_data/" . $project_id . '/' . $form_id),
-                'total_rows' => $this->Xform_model->count_all_records($form->form_id, $where_condition),
-                'uri_segment' => 5,
-            );
-
-            $this->pagination->initialize($config);
-            $page = ($this->uri->segment(5)) ? $this->uri->segment(5) : 0;
-            $data['form_id'] = $form->form_id;
-
-            //Prevents the filters from applying to a different form
-            if ($this->session->userdata("filters_form_id") != $form_id) {
-                $this->session->unset_userdata("filters_form_id");
-                $this->session->unset_userdata("form_filters");
-            }
-
+            //set field keys
             if (isset($_POST["apply"]) || $this->session->userdata("form_filters")) {
                 if (!isset($_POST["apply"])) {
                     $selected_columns = $this->session->userdata("form_filters");
@@ -1078,20 +1186,53 @@ class Xform extends MX_Controller
                     $this->session->set_userdata(array("form_filters" => $selected_columns));
                 }
                 $data['selected_columns'] = $selected_columns;
-                $data['form_data'] = $this->Xform_model->find_form_data_by_fields($form->form_id, $selected_columns, $this->pagination->per_page, $page, $where_condition);
+                $form_data = $this->Xform_model->search_form_data_by_fields($form->form_id, $selected_columns, $where_condition, $start_at, $end_at);
             } else {
-                $data['form_data'] = $this->Xform_model->find_form_data($form->form_id, $this->pagination->per_page, $page, $where_condition);
+                $form_data = $this->Xform_model->search_form_data($form->form_id, $where_condition, $start_at, $end_at);
             }
 
-            $data["links"] = $this->pagination->create_links();
-
-            $this->load->view('header', $data);
-            $this->load->view("form_data_details");
-            $this->load->view('footer');
+            if ($form_data) {
+                $data['form_data'] = $form_data;
+            } else {
+                $data['form_data'] = [];
+            }
         } else {
-            $this->session->set_flashdata("message", display_message("Form does not exists", "danger"));
-            redirect("projects/lists");
+            //pagination
+            $config = array(
+                'base_url' => $this->config->base_url("xform/form_data/" . $project_id . '/' . $form_id),
+                'total_rows' => $this->Xform_model->count_all_records($form->form_id, $where_condition),
+                'uri_segment' => 5,
+            );
+
+            $this->pagination->initialize($config);
+            $page = ($this->uri->segment(5)) ? $this->uri->segment(5) : 0;
+
+            //set field keys
+            if (isset($_POST["apply"]) || $this->session->userdata("form_filters")) {
+                if (!isset($_POST["apply"])) {
+                    $selected_columns = $this->session->userdata("form_filters");
+                } else {
+                    $selected_columns = $_POST;
+                    $selected_columns = array('id' => "ID") + $selected_columns;
+
+                    unset($selected_columns['apply']);
+                    $this->session->set_userdata("filters_form_id", $form_id);
+                    $this->session->set_userdata(array("form_filters" => $selected_columns));
+                }
+                $data['selected_columns'] = $selected_columns;
+                $form_data = $this->Xform_model->find_form_data_by_fields($form->form_id, $selected_columns, $this->pagination->per_page, $page, $where_condition);
+            } else {
+                $form_data = $this->Xform_model->find_form_data($form->form_id, $this->pagination->per_page, $page, $where_condition);
+            }
+            //form data
+            $data['form_data'] = $form_data;
+            $data["links"] = $this->pagination->create_links();
         }
+
+        //render view
+        $this->load->view('header', $data);
+        $this->load->view("form_data_details");
+        $this->load->view('footer');
     }
 
     /**
@@ -1100,12 +1241,27 @@ class Xform extends MX_Controller
      *
      * @param null $form_id
      */
-    function excel_export_form_data($form_id)
+    function xls_export_form_data($form_id)
     {
         $where_condition = null;
         if (!$this->ion_auth->is_admin()) {
             $where_condition = $this->Acl_model->find_user_permissions($this->user_id, $form_id);
         }
+
+        //variable html1
+        $html1 = '';
+
+        // Set some content to print
+        $html1 .= "Afyadata\r";
+
+        // Set document properties
+        $this->spreadsheet->getProperties()->setCreator("Renfrid Ngolongolo")
+            ->setLastModifiedBy("Renfrid Ngolongolo")
+            ->setTitle("Sacids Foundation for OneHealth")
+            ->setSubject("Afyadata")
+            ->setDescription("Afyadata")
+            ->setKeywords("Afyadata")
+            ->setCategory("Afyadata");
 
         if ($this->session->userdata("form_filters")) {
             $form_filters = $this->session->userdata("form_filters");
@@ -1113,7 +1269,8 @@ class Xform extends MX_Controller
             foreach ($form_filters as $column_name) {
                 $inc = 1;
                 $column_title = $this->xFormReader->getColumnLetter($serial);
-                $this->objPHPExcel->setActiveSheetIndex(0)->setCellValue($column_title . $inc, $column_name);
+                //activate worksheet number 1
+                $this->spreadsheet->setActiveSheetIndex(0)->setCellValue($column_title . $inc, $column_name);
                 $serial++;
             }
             $form_data = $this->Xform_model->find_form_data_by_fields($form_id, $form_filters, 5000, 0, $where_condition);
@@ -1147,7 +1304,7 @@ class Xform extends MX_Controller
                 else
                     $column_name = $column;
 
-                $this->objPHPExcel->setActiveSheetIndex(0)->setCellValue($column_title . $inc, $column_name);
+                $this->spreadsheet->setActiveSheetIndex(0)->setCellValue($column_title . $inc, $column_name);
                 $serial++;
             }
             $form_data = $this->Xform_model->find_form_data($form_id, 5000, 0, $where_condition);
@@ -1158,244 +1315,32 @@ class Xform extends MX_Controller
             $serial = 0;
             foreach ($data as $key => $entry) {
                 $column_title = $this->xFormReader->getColumnLetter($serial);
-                if (preg_match('/(\.jpg|\.png|\.bmp)$/', $entry)) {
-                    $column_value = '';
+                if ($key == "meta_username") {
+                    $column_value = get_collector_name_from_phone($entry) . ' - ' . $entry;
                 } else {
-                    $column_value = $entry;
+                    if (preg_match('/(\.jpg|\.png|\.bmp)$/', $entry)) {
+                        $column_value = '';
+                    } else {
+                        $column_value = $entry;
+                    }
                 }
-
-                $this->objPHPExcel->getActiveSheet()->setCellValue($column_title . $inc, $column_value);
+                $this->spreadsheet->getActiveSheet()->setCellValue($column_title . $inc, $column_value);
                 $serial++;
             }
             $inc++;
         }
 
-        //name the worksheet
-        $this->objPHPExcel->getActiveSheet()->setTitle("Form Data");
+        // Rename worksheet
+        $this->spreadsheet->getActiveSheet()->setTitle('Form Report');
+
+        // Set active sheet index to the first sheet, so Excel opens this as the first sheet
+        $this->spreadsheet->setActiveSheetIndex(0);
 
         $filename = "Exported_" . $form_id . "_" . date("Y-m-d") . ".xlsx"; //save our workbook as this file name
 
-        //header
-        header("Last-Modified: " . gmdate("D, d M Y H:i:s") . " GMT");
-        header("Cache-Control: no-store, no-cache, must-revalidate");
-        header("Cache-Control: post-check=0, pre-check=0", FALSE);
-        header("Pragma: no-cache");
-        header('Content-type: application/vnd.ms-excel');
-        header('Content-Disposition: attachment;filename="' . $filename . '"');
-
-        $objWriter = PHPExcel_IOFactory::createWriter($this->objPHPExcel, 'Excel2007');
-        ob_end_clean();
-
-        $objWriter->save('php://output');
-    }
-
-    //exporting Zanzibar IDWE
-    public function export_IDWE($form_id, $week_number)
-    {
-        //form details
-        $this->model->set_table('xforms');
-        $xform = $this->model->get_by('id', $form_id);
-
-        //table fields
-        $table_fields = $this->Xform_model->find_table_columns($xform->form_id);
-
-        $columns = count($table_fields);
-
-        $last_column = $this->xFormReader->columnLetter($columns);
-
-        //variable html1
-        $html1 = '';
-
-        // Set some content to print
-        $html1 .= "INFECTIOUS DISEASE WEEK ENDING REPORT (IDWE)\r";
-        $html1 .= $week_number . "th WK  BY HEALTH FACILITIES AND DISTRICTS IN ZANZIBAR.\r";
-
-        // Set document properties
-        $this->objPHPExcel->getProperties()
-            ->setCreator("Sacids")
-            ->setLastModifiedBy("Renfrid")
-            ->setTitle("AfyaData IDWE Report")
-            ->setSubject("Zanzibar IDWE")
-            ->setDescription("Infectious Disease Week Ending Report")
-            ->setKeywords("IDWE, Zanzibar")
-            ->setCategory("IDWE REPORT");
-
-        //activate worksheet number 1
-        $this->objPHPExcel->setActiveSheetIndex(0)->setCellValue('A1', $html1);
-        $this->objPHPExcel->setActiveSheetIndex(0)->mergeCells('A1:' . $last_column . '1');
-        $this->objPHPExcel->getActiveSheet()->getRowDimension('1')->setRowHeight(50);
-
-        $this->objPHPExcel->getActiveSheet()->getStyle('A1')->applyFromArray(
-            array('font' => array("bold" => true))
-        );
-        $this->objPHPExcel->getActiveSheet()->getStyle('A1')->getAlignment()->setWrapText(true);
-
-
-        //Header Columns
-        $this->objPHPExcel->getActiveSheet()->mergeCells('A3:A6');
-        $this->objPHPExcel->getActiveSheet()->setCellValue('A3', 'Week Number');
-        $this->objPHPExcel->getActiveSheet()->getStyle('A3')->getAlignment()->setTextRotation(90);
-
-        $this->objPHPExcel->getActiveSheet()->mergeCells('B3:B6');
-        $this->objPHPExcel->getActiveSheet()->setCellValue('B3', 'Year');
-        $this->objPHPExcel->getActiveSheet()->getColumnDimension('B')->setAutoSize(true);
-        $this->objPHPExcel->getActiveSheet()->getStyle('B3')->getAlignment()->setTextRotation(90);
-
-        $this->objPHPExcel->getActiveSheet()->mergeCells('C3:C6');
-        $this->objPHPExcel->getActiveSheet()->setCellValue('C3', 'Region');
-        $this->objPHPExcel->getActiveSheet()->getColumnDimension('C')->setAutoSize(true);
-        $this->objPHPExcel->getActiveSheet()->getStyle('C3')->getAlignment()->setTextRotation(90);
-
-        $this->objPHPExcel->getActiveSheet()->mergeCells('D3:D6');
-        $this->objPHPExcel->getActiveSheet()->setCellValue('D3', 'District');
-        $this->objPHPExcel->getActiveSheet()->getColumnDimension('C')->setAutoSize(true);
-        $this->objPHPExcel->getActiveSheet()->getStyle('D3')->getAlignment()->setTextRotation(90);
-
-        $this->objPHPExcel->getActiveSheet()->mergeCells('E3:E6');
-        $this->objPHPExcel->getActiveSheet()->setCellValue('E3', 'S/N');
-
-        $this->objPHPExcel->getActiveSheet()->mergeCells('F3:F6');
-        $this->objPHPExcel->getActiveSheet()->setCellValue('F3', 'Health Facilities');
-        $this->objPHPExcel->getActiveSheet()->getColumnDimension('F')->setAutoSize(true);
-        $this->objPHPExcel->getActiveSheet()->getStyle('F3')->getAlignment()->setTextRotation(90);
-
-        $this->objPHPExcel->getActiveSheet()->freezePane('G7');
-
-        $diseases = array(
-            'Malaria',
-            'Cholera',
-            'Bloody Diarrhoea',
-            'Animal Bites',
-            'Measles',
-            'CS Meningitis',
-            'Yellow Fever',
-            'AFP',
-            'Dengue Fever',
-            'Neonatal Tetanus',
-            'Plague',
-            'Rabies',
-            'Small Pox',
-            'Trypanosomiasis',
-            'Viral Haemorrhagic Fevers',
-            'Keratoconjuctivitis',
-            'Human Influenza Sari',
-            'Anthrax'
-        );
-
-        $d = 0;
-
-        for ($i = 6, $c = 0; $i < 150; $i++, $c++) {
-
-            if (!($c % 8)) {
-                $r = $this->xFormReader->columnLetter($i) . '3:' . $this->xFormReader->columnLetter($i + 7) . '3';
-                $this->objPHPExcel->getActiveSheet()->mergeCells($r);
-                $this->objPHPExcel->getActiveSheet()->setCellValue($this->xFormReader->columnLetter($i) . '3', $diseases[$d]);
-                //echo " " . $c . ":" . $d;
-                $d++;
-
-                if (!($c % 4)) {
-
-                    for ($k = 0; $k < 2; $k++) {
-                        $r = $this->xFormReader->columnLetter($i + $k * 4) . '4:' . $this->xFormReader->columnLetter($i + $k * 4 + 3) . '4';
-                        $this->objPHPExcel->getActiveSheet()->mergeCells($r);
-                        $v = ($k % 2) ? ' > 5 yrs ' : ' < 5 yrs';
-                        $this->objPHPExcel->getActiveSheet()->setCellValue($this->xFormReader->columnLetter($i + $k * 4) . '4', $v);
-
-                    }
-                    //$nne .= '<td colspan="4">  < 5 yrs </td><td colspan="4">  > 5 yrs </td>';
-
-                    if (!($c % 2)) {
-
-                        for ($k = 0; $k < 4; $k++) {
-                            $r = $this->xFormReader->columnLetter($i + $k * 2) . '5:' . $this->xFormReader->columnLetter($i + $k * 2 + 1) . '5';
-                            $this->objPHPExcel->getActiveSheet()->mergeCells($r);
-                            $v = ($k % 2) ? 'C' : 'D';
-                            $this->objPHPExcel->getActiveSheet()->setCellValue($this->xFormReader->columnLetter($i + $k * 2) . '5', $v);
-                        }
-                    }
-
-                }
-            }
-
-            $v = ($c % 2) ? 'F' : 'M';
-            $this->objPHPExcel->getActiveSheet()->setCellValue($this->xFormReader->columnLetter($i) . '6', $v);
-        }
-
-
-        // get values from DB
-        $this->model->set_table($xform->form_id);
-        $this->model->order_by('_xf_da0f48ffc452923e77a8c70e393ed5ac', 'ASC');
-        $this->model->order_by('_xf_0c37672a5ed28b81b30d37d52b20f57e', 'ASC');
-        $this->model->order_by('_xf_3b4caf4273007b260d666188609c6e2a', 'ASC');
-        $data = $this->model->as_array()->get_many_by('_xf_20de688d974183449850b0d32a15de47', $week_number);
-
-        $idwe_data = array();
-        $sn = 1;
-        foreach ($data as $row) {
-            $c = 0;
-            $tmp = array();
-            foreach ($row as $k => $v) {
-                if ($c == 0) {
-                    array_push($tmp, $row['_xf_20de688d974183449850b0d32a15de47']);
-                    array_push($tmp, date('Y', strtotime($row['_xf_1e0b70ceccc8a5457221fb938ee70caf'])));
-                    array_push($tmp, ucfirst(str_replace('_', ' ', $row['_xf_da0f48ffc452923e77a8c70e393ed5ac'])));
-                    array_push($tmp, ucfirst(str_replace('_', ' ', $row['_xf_0c37672a5ed28b81b30d37d52b20f57e'])));
-                    array_push($tmp, $sn++);
-                    array_push($tmp, ucfirst(str_replace('_', ' ', $row['_xf_3b4caf4273007b260d666188609c6e2a'])));
-                }
-                //print data
-                if ($c > 6) {
-                    if (substr($k, 0, 4) == '_xf_') array_push($tmp, $v);
-                }
-                $c++;
-            }
-            array_push($idwe_data, $tmp);
-        }
-
-        $this->objPHPExcel->getActiveSheet()->fromArray($idwe_data, 0, 'A7', true);
-
-        // set headers
-        $header = 'A3:ET6';
-        $header_style = array(
-            'fill' => array(
-                'type' => PHPExcel_Style_Fill::FILL_SOLID,
-                'color' => array('rgb' => '83C9FC')
-
-            ),
-            'font' => array(
-                'bold' => false,
-                'size' => '12',
-                'color' => array('rgb' => '000000')
-            ),
-            'alignment' => array(
-                'horizontal' => PHPExcel_Style_Alignment::HORIZONTAL_CENTER,
-            )
-        );
-        $this->objPHPExcel->getActiveSheet()->getStyle($header)->applyFromArray($header_style);
-
-        // set boarders
-        $borders = array(
-            'borders' => array(
-                'allborders' => array(
-                    'style' => PHPExcel_Style_Border::BORDER_THIN
-                )
-            )
-        );
-        $c = sizeof($idwe_data) + 6;
-        $range = 'A3:ET' . $c;
-        $this->objPHPExcel->getActiveSheet()->getStyle($range)->applyFromArray($borders);
-
-        // Rename worksheet
-        $this->objPHPExcel->getActiveSheet()->setTitle('FORM REPORT');
-
-        $filename = date("Y") . "_WEEK_" . $week_number . ".xlsx"; //save our workbook as this file name
-
-        // Set active sheet index to the first sheet, so Excel opens this as the first sheet
-        $this->objPHPExcel->setActiveSheetIndex(0);
-
         // Redirect output to a client’s web browser (Excel2007)
         header('Content-Type: application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
-        header('Content-Disposition: attachment;filename="' . $filename . '.xlsx"');
+        header('Content-Disposition: attachment;filename="' . $filename . '"');
         header('Cache-Control: max-age=0');
         // If you're serving to IE 9, then the following may be needed
         header('Cache-Control: max-age=1');
@@ -1406,82 +1351,76 @@ class Xform extends MX_Controller
         header('Cache-Control: cache, must-revalidate'); // HTTP/1.1
         header('Pragma: public'); // HTTP/1.0
 
-        $objWriter = PHPExcel_IOFactory::createWriter($this->objPHPExcel, 'Excel2007');
+        $objWriter = \PhpOffice\PhpSpreadsheet\IOFactory::createWriter($this->spreadsheet, 'Xlsx');
         $objWriter->save('php://output');
         exit;
     }
 
-    //get health Facility name
-    function get_health_facility_details($username = null)
+    //export csv data
+    function csv_export_form_data($form_id)
     {
-        if ($username != null) {
-            $user = $this->User_model->find_by_username($username);
 
-            if ($user->facility != null) {
-                $facility = $this->Facilities_model->get_facility_by_id($user->facility);
+        // file name
+        $filename = "Exported_" . $form_id . "_" . date("Ymd") . ".csv"; //save our workbook as this file name
 
-                if ($facility)
-                    return $facility->name;
-                else
-                    return '';
+        header("Content-Description: File Transfer");
+        header("Content-Disposition: attachment; filename=$filename");
+        header("Content-Type: application/csv; ");
+
+        $where_condition = null;
+        if (!$this->ion_auth->is_admin()) {
+            $where_condition = $this->Acl_model->find_user_permissions($this->user_id, $form_id);
+        }
+
+        //table fields
+        $table_fields = $this->Xform_model->find_table_columns($form_id);
+        $field_maps = $this->_get_mapped_table_column_name($form_id);
+
+        $mapped_fields = array();
+        foreach ($table_fields as $key => $column) {
+            if (array_key_exists($column, $field_maps)) {
+                $mapped_fields[$column] = $field_maps[$column];
             } else {
-                return '';
+                $mapped_fields[$column] = $column;
             }
-        } else {
-            return '';
         }
-    }
 
-    //get health Facility name
-    function get_district_details($username = null)
-    {
-        if ($username != null) {
-            $user = $this->User_model->find_by_username($username);
-
-            if ($user->district != null) {
-                $this->model->set_table('district');
-                $district = $this->model->get_by('id', $user->district);
-
-                if ($district)
-                    return $district->name;
-                else
-                    return '';
-            } else {
-                return '';
+        $custom_maps = $this->Xform_model->get_fieldname_map($form_id);
+        foreach ($custom_maps as $f_map) {
+            if (array_key_exists($f_map['col_name'], $mapped_fields)) {
+                $mapped_fields[$f_map['col_name']] = $f_map['field_label'];
             }
-        } else {
-            return '';
         }
+
+        $header = array();
+
+        $serial = 0;
+        foreach ($mapped_fields as $key => $column) {
+            if (array_key_exists($column, $field_maps))
+                $column_name = $field_maps[$column];
+            else
+                $column_name = $column;
+
+            array_push($header, $column_name);
+
+            $serial++;
+        }
+
+        // file creation
+        $file = fopen('php://output', 'w');
+
+        fputcsv($file, $header);
+
+        //deals with data
+        $form_data = $this->Xform_model->find_form_data($form_id, 5000, 0, $where_condition);
+
+        foreach ($form_data as $data) {
+            fputcsv($file, (array)$data);
+        }
+        fclose($file);
+        exit;
     }
 
-    /**
-     * @param null $xform_id
-     */
-    function csv_export_form_data($xform_id = NULL)
-    {
-        if ($xform_id == NULL) {
-            $this->session->set_flashdata("message", display_message("You must select a form", "danger"));
-            redirect("projects");
-        }
-        $table_name = $xform_id;
-        $query = $this->db->query("select * from {$table_name} order by id ASC ");
-        $this->_force_csv_download($query, "Exported_CSV_for_" . $table_name . "_" . date("Y-m-d") . ".csv");
-    }
-
-    /**
-     * @param $query
-     * @param string $filename
-     */
-    function _force_csv_download($query, $filename = '.csv')
-    {
-        $this->load->dbutil();
-        $this->load->helper('file');
-        $this->load->helper('download');
-        $delimiter = ",";
-        $newline = "\r\n";
-        $data = $this->dbutil->csv_from_result($query, $delimiter, $newline);
-        force_download($filename, $data);
-    }
 
     /**
      * @param null $xform_id
@@ -1729,5 +1668,48 @@ class Xform extends MX_Controller
         $this->load->view("header", $data);
         $this->load->view("form_overview", $data);
         $this->load->view("footer", $data);
+    }
+
+    //push message
+    function push($recipients, $message)
+    {
+        $date_time = date('Y-m-d H:i:s');
+        $message = array(
+            'recipients' => $recipients,
+            'message' => $message,
+            'datetime' => $date_time,
+            'sender_id' => $this->sms_sender_id,
+            'mobile_service_id' => self::MOBILE_SERVICE_ID
+        );
+
+        $post_data = array('data' => json_encode($message), 'datetime' => $date_time);
+        log_message("DEBUG", json_encode($post_data));
+        echo $post_data['data'];
+
+        if (!is_array($post_data)) {
+            log_message("error", "Data received is not array");
+            return FALSE;
+        }
+
+        //HASH the JSON with the generated user API key using SHA-256 method.
+        $hash = hash_hmac('sha256', $post_data['data'], $this->api_key, TRUE);
+
+        $http_header = array(
+            'X-Auth-Request-Hash:' . base64_encode($hash),
+            'X-Auth-Request-Id:' . $this->user,
+            'X-Auth-Request-Type:api'
+        );
+        $ch = curl_init();
+        curl_setopt($ch, CURLOPT_URL, $this->sms_push_url);
+        curl_setopt($ch, CURLOPT_POST, TRUE);
+        curl_setopt($ch, CURLOPT_HTTPHEADER, $http_header);
+        curl_setopt($ch, CURLOPT_POSTFIELDS, $post_data);
+        curl_setopt($ch, CURLOPT_RETURNTRANSFER, TRUE);
+        $response = curl_exec($ch);
+        //echo "http response code " . curl_getinfo($ch, CURLINFO_HTTP_CODE);
+        log_message("info", "http response code " . curl_getinfo($ch, CURLINFO_HTTP_CODE));
+        curl_close($ch);
+
+        print_r($response);
     }
 }

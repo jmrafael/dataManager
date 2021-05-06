@@ -195,9 +195,11 @@ class Xform_model extends CI_Model
     public function get_form_list_by_perms($perms, $limit = 30, $offset = 0, $status = NULL, $push = NULL)
     {
         if (is_array($perms)) {
+            $this->db->group_start();
             foreach ($perms as $key => $value) {
                 $this->db->or_like("perms", $value);
             }
+            $this->db->group_end();
         } else {
             $this->db->where("perms", $perms);
         }
@@ -206,7 +208,7 @@ class Xform_model extends CI_Model
             $this->db->where("status", $status);
 
         if ($push != NULL)
-            $this->db->where("push", 1);
+            $this->db->where("push", $push);
 
         $this->db->limit($limit, $offset);
         return $this->db->get(self::$xform_table_name)->result();
@@ -298,7 +300,6 @@ class Xform_model extends CI_Model
     public function insert_into_map($data)
     {
         return $this->db->insert_batch(self::$xform_fieldname_map_table_name, $data);
-
     }
 
     /**
@@ -387,6 +388,23 @@ class Xform_model extends CI_Model
         return $this->db->get($table_name)->result();
     }
 
+    //search form data
+    public function search_form_data($table_name, $perm_conditions = null, $start_at = null, $end_at = null)
+    {
+        if ($perm_conditions != null) {
+            if ($perm_conditions != null) {
+                $this->db->where($perm_conditions, "", false);
+            }
+        }
+
+        if ($start_at != null && $end_at != null) {
+            $this->db->where('submitted_at BETWEEN "' . date('Y-m-d', strtotime($start_at)) . '" and "' . date('Y-m-d', strtotime($end_at)) . '"');
+        }
+
+        $this->db->order_by("id", "DESC");
+        return $this->db->get($table_name)->result();
+    }
+
     /**
      * @param $table_name
      * @param array $selected_columns
@@ -403,6 +421,23 @@ class Xform_model extends CI_Model
 
         if ($perm_conditions != null) {
             $this->db->where($perm_conditions, "", false);
+        }
+
+        return $this->db->get($table_name)->result();
+    }
+
+    //search form data by fields
+    public function search_form_data_by_fields($table_name, $selected_columns = array(), $perm_conditions = null, $start_at = null, $end_at = null)
+    {
+        $this->db->select(implode(",", array_keys($selected_columns)));
+        $this->db->order_by("id", "DESC");
+
+        if ($perm_conditions != null) {
+            $this->db->where($perm_conditions, "", false);
+        }
+
+        if ($start_at != null && $end_at != null) {
+            $this->db->where('submitted_at BETWEEN "' . date('Y-m-d', strtotime($start_at)) . '" and "' . date('Y-m-d', strtotime($end_at)) . '"');
         }
 
         return $this->db->get($table_name)->result();
@@ -580,10 +615,10 @@ class Xform_model extends CI_Model
      */
     public function xform_table_column_exists($table_name, $column_name)
     {
-        $this->db->where("table_name", $table_name);
-        $this->db->where("col_name", $column_name);
-        //$this->db->limit(1);
-        return ($this->db->get(self::$xform_fieldname_map_table_name)->num_rows() > 0) ? TRUE : FALSE;
+        return $this->db
+            ->where("table_name", $table_name)
+            ->where("col_name", $column_name)
+            ->get(self::$xform_fieldname_map_table_name)->num_rows();
     }
 
     /**

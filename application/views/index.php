@@ -1,4 +1,4 @@
-<section class="bg-light-grey">
+<section class="bg-white">
     <div class="container">
         <div class="row">
             <div class="col-sm-12 col-md-12 col-lg-12 main">
@@ -16,17 +16,13 @@
                                 <div class="panel-body">
 
                                     <ul class="nav nav-tabs">
-                                        <li class="active"><a data-toggle="tab"
-                                                              href="#overall"><?= $this->lang->line("label_graph_period_overall") ?></a>
+                                        <li class="active"><a data-toggle="tab" href="#overall"><?= $this->lang->line("label_graph_period_overall") ?></a>
                                         </li>
-                                        <li><a data-toggle="tab"
-                                               href="#monthly"><?= $this->lang->line("label_graph_period_monthly") ?></a>
+                                        <li><a data-toggle="tab" href="#monthly"><?= $this->lang->line("label_graph_period_monthly") ?></a>
                                         </li>
-                                        <li><a data-toggle="tab"
-                                               href="#weekly"><?= $this->lang->line("label_graph_period_weekly") ?></a>
+                                        <li><a data-toggle="tab" href="#weekly"><?= $this->lang->line("label_graph_period_weekly") ?></a>
                                         </li>
-                                        <li><a data-toggle="tab"
-                                               href="#daily"><?= $this->lang->line("label_graph_period_daily") ?></a>
+                                        <li><a data-toggle="tab" href="#daily"><?= $this->lang->line("label_graph_period_daily") ?></a>
                                         </li>
                                     </ul>
 
@@ -59,12 +55,13 @@
                                             <i class="fa fa-users"></i>
                                         </div>
                                         <div class="col-xs-7">
-                                            <h2><?= (isset($active_users) ? $active_users : '0'); ?></h2>
+                                            <h2><?= (isset($data_collectors) ? $data_collectors : '0'); ?></h2>
                                             <h6><?= $this->lang->line("label_data_collectors") ?></h6>
                                         </div>
                                     </div>
                                 </div>
-                            </div><!--./panel -->
+                            </div>
+                            <!--./panel -->
 
                             <div class="panel panel-tile info-block">
                                 <div class="panel-body">
@@ -78,7 +75,8 @@
                                         </div>
                                     </div>
                                 </div>
-                            </div><!--./panel -->
+                            </div>
+                            <!--./panel -->
 
                             <div class="panel panel-tile info-block">
                                 <div class="panel-body">
@@ -92,7 +90,8 @@
                                         </div>
                                     </div>
                                 </div>
-                            </div><!--./panel -->
+                            </div>
+                            <!--./panel -->
 
                             <div class="panel panel-tile info-block">
                                 <div class="panel-body">
@@ -106,7 +105,8 @@
                                         </div>
                                     </div>
                                 </div>
-                            </div><!--./panel -->
+                            </div>
+                            <!--./panel -->
                         </div>
                     </div>
                 </div>
@@ -129,12 +129,15 @@
                                                             <span class="title"><?= strtoupper($value->title) ?></span>
                                                             <br>
                                                             <span class="name"><?= ucfirst($value->first_name) . ' ' . ucfirst($value->last_name) ?></span>
-                                                            <span
-                                                                    class="time"><?= '<i class="fa fa-clock-o"></i> ' . time_ago($value->date_created); ?></span>
+                                                            <span class="time"><?= '<i class="fa fa-clock-o"></i> ' . time_ago($value->date_created); ?></span>
                                                             <br>
                                                             <span class="msg"><?= $value->message ?></span>
-                                                            <br/><span
-                                                                    class="pull-right"><?= anchor('feedback/user_feedback/' . $value->instance_id, '<i class="fa fa-comments-o fa-lg "></i>') ?></span>
+                                                            <br /><span class="pull-right">
+                                                                <?php
+                                                                if (perms_role('Feedback', 'user_feedback'))
+                                                                    echo anchor('feedback/user_feedback/' . $value->instance_id, '<i class="fa fa-comments-o fa-lg "></i>');
+                                                                ?>
+                                                            </span>
                                                         </div>
                                                     </div>
                                                     <hr>
@@ -152,9 +155,16 @@
                         <div class="">
                             <div class="panel panel-default">
                                 <div class="panel-heading">
-                                    <b><?= $this->lang->line("label_frequently_detected_disease") ?></b></div>
+                                    <b><?= $this->lang->line("label_frequently_detected_disease") ?></b>
+                                </div>
                                 <div class="panel-body">
-
+                                    <?php if (isset($detected_diseases) && $detected_diseases) { ?>
+                                        <ul class="list-group">
+                                            <?php foreach ($detected_diseases as $value) { ?>
+                                                <li class="list-group-item"><?= $value->disease->title ?></li>
+                                            <?php } ?>
+                                        </ul>
+                                    <?php } ?>
                                 </div>
                             </div>
                         </div>
@@ -167,11 +177,10 @@
 </section>
 
 <script type="text/javascript">
-
     //TODO: make function to be called within view
 
     //Overall data
-    $(function () {
+    $(function() {
         Highcharts.setOptions({
             lang: {
                 thousandsSep: ','
@@ -179,33 +188,32 @@
         });
 
         $('#overall-graph').highcharts({
-                chart: {
-                    type: 'column'
-                },
+            chart: {
+                type: 'column'
+            },
+            title: {
+                text: '<?= $this->lang->line("label_graph_title") ?>'
+            },
+            xAxis: {
+                categories: <?php echo $form_title; ?>
+            },
+            yAxis: {
                 title: {
-                    text: '<?=$this->lang->line("label_graph_title")?>'
-                },
-                xAxis: {
-                    categories: <?php echo $form_title;?>
-                },
-                yAxis: {
-                    title: {
-                        text: '<?=$this->lang->line("label_form_submitted")?>'
-                    }
-                },
-                series: [{
-                    name: '<?php echo $this->lang->line("label_graph_series_name"); ?>',
-                    data: <?php echo $overall_data;?>
-                }],
-                credits: {
-                    enabled: false
+                    text: '<?= $this->lang->line("label_form_submitted") ?>'
                 }
+            },
+            series: [{
+                name: '<?php echo $this->lang->line("label_graph_series_name"); ?>',
+                data: <?php echo $overall_data; ?>
+            }],
+            credits: {
+                enabled: false
             }
-        );
+        });
     });
 
     //Monthly data
-    $(function () {
+    $(function() {
         Highcharts.setOptions({
             lang: {
                 thousandsSep: ','
@@ -213,33 +221,32 @@
         });
 
         $('#monthly-graph').highcharts({
-                chart: {
-                    type: 'column'
-                },
+            chart: {
+                type: 'column'
+            },
+            title: {
+                text: 'Monthly form submitted'
+            },
+            xAxis: {
+                categories: <?php echo $form_title; ?>
+            },
+            yAxis: {
                 title: {
-                    text: 'Monthly form submitted'
-                },
-                xAxis: {
-                    categories: <?php echo $form_title;?>
-                },
-                yAxis: {
-                    title: {
-                        text: 'Form submitted'
-                    }
-                },
-                series: [{
-                    name: '<?php echo 'Submitted forms'; ?>',
-                    data: <?php echo $monthly_data;?>
-                }],
-                credits: {
-                    enabled: false
+                    text: 'Form submitted'
                 }
+            },
+            series: [{
+                name: '<?php echo 'Submitted forms'; ?>',
+                data: <?php echo $monthly_data; ?>
+            }],
+            credits: {
+                enabled: false
             }
-        );
+        });
     });
 
     //Weekly data
-    $(function () {
+    $(function() {
         Highcharts.setOptions({
             lang: {
                 thousandsSep: ','
@@ -247,33 +254,32 @@
         });
 
         $('#weekly-graph').highcharts({
-                chart: {
-                    type: 'column'
-                },
+            chart: {
+                type: 'column'
+            },
+            title: {
+                text: 'Weekly form submitted'
+            },
+            xAxis: {
+                categories: <?php echo $form_title; ?>
+            },
+            yAxis: {
                 title: {
-                    text: 'Weekly form submitted'
-                },
-                xAxis: {
-                    categories: <?php echo $form_title;?>
-                },
-                yAxis: {
-                    title: {
-                        text: 'Form submitted'
-                    }
-                },
-                series: [{
-                    name: '<?php echo 'Submitted forms'; ?>',
-                    data: <?php echo $weekly_data;?>
-                }],
-                credits: {
-                    enabled: false
+                    text: 'Form submitted'
                 }
+            },
+            series: [{
+                name: '<?php echo 'Submitted forms'; ?>',
+                data: <?php echo $weekly_data; ?>
+            }],
+            credits: {
+                enabled: false
             }
-        );
+        });
     });
 
     //Weekly data
-    $(function () {
+    $(function() {
         Highcharts.setOptions({
             lang: {
                 thousandsSep: ','
@@ -281,29 +287,27 @@
         });
 
         $('#daily-graph').highcharts({
-                chart: {
-                    type: 'column'
-                },
+            chart: {
+                type: 'column'
+            },
+            title: {
+                text: 'Daily form submitted'
+            },
+            xAxis: {
+                categories: <?php echo $form_title; ?>
+            },
+            yAxis: {
                 title: {
-                    text: 'Daily form submitted'
-                },
-                xAxis: {
-                    categories: <?php echo $form_title;?>
-                },
-                yAxis: {
-                    title: {
-                        text: 'Form submitted'
-                    }
-                },
-                series: [{
-                    name: '<?php echo 'Submitted forms'; ?>',
-                    data: <?php echo $daily_data;?>
-                }],
-                credits: {
-                    enabled: false
+                    text: 'Form submitted'
                 }
+            },
+            series: [{
+                name: '<?php echo 'Submitted forms'; ?>',
+                data: <?php echo $daily_data; ?>
+            }],
+            credits: {
+                enabled: false
             }
-        );
+        });
     });
 </script>
-

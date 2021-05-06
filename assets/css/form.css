@@ -1,0 +1,50 @@
+@charset "utf-8";
+/*==================================================
+Forms
+===================================================*/
+.pure-form {
+    width: 100%;
+    margin: 10px 0 10px 0;
+    padding: 20px;
+    background: #f5f5f5;
+    border-radius: 0;
+}
+
+.form-group label {
+    font-weight: 600;
+    font-size: 13px;
+}
+
+.form-group span.red {
+    color: #CC0000 !important;
+    font-size: 11px;
+    font-weight: 600;
+}
+
+.form-group span.red p {
+    color: #CC0000 !important;
+    font-size: 11px;
+    font-weight: 600;
+}
+
+.form-group input[type=text], input[type=email], input[type=password], input[type=number], textarea {
+    width: 100%;
+    border: 1px solid #cacaca;
+    font-size: 14px;
+}
+
+.form-group select {
+    width: 100%;
+    border: 1px solid #cacaca;
+    background: #ffffff;
+    font-size: 14px;
+}
+
+/*==================================================
+Button
+===================================================*/
+.btn {
+    font-size: 14px;
+    font-weight: 600;
+}
+
