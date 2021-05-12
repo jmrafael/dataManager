@@ -69,14 +69,16 @@
         <!-- Collect the nav links, forms, and other content for toggling -->
         <div class="collapse navbar-collapse" id="bs-example-navbar-collapse-1">
             <ul class="nav navbar-nav">
-                <li><?= anchor("about", "About AfyaData", 'class="page-scroll"') ?></li>
-                <li><?= anchor("about", "Public Forms", 'class="page-scroll"') ?></li>
-                <li><?= anchor("about", "Success Stories", 'class="page-scroll"') ?></li>
+                <li><?= anchor("about", "Sobre nós", 'class="page-scroll"') ?></li>
+<!--                <li>--><?//= anchor("about", "Formulários publicos", 'class="page-scroll"') ?><!--</li>-->
+                <li><?= anchor("#", "Histórias de sucesso", 'class="page-scroll"') ?></li>
+                <li><?= anchor("#", "Contactos", 'class="page-scroll"') ?></li>
+
             </ul>
 
             <ul class="nav navbar-nav navbar-right">
-                <li class="btn-link"><?= anchor("auth/login", '<i class="fa fa-sign-in"></i> Login', 'class="btn btn-primary"') ?></li>
-                <!--<li class="btn-link"><?= anchor("auth/sign_up", '<i class="fa fa-user-plus"></i> Sign up', 'class="btn btn-maroon"') ?></li>-->
+                <li class="btn-link"><?= anchor("auth/login", '<i class="fa fa-sign-in"></i> Entrar', 'class="btn btn-primary"') ?></li>
+                <!--<li class="btn-link"><?= anchor("auth/sign_up", '<i class="fa fa-user-plus"></i> Registo', 'class="btn btn-maroon"') ?></li>-->
             </ul>
         </div>
     </div>
